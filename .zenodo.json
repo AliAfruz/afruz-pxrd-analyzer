@@ -8,6 +8,10 @@
       "affiliation": "University of Mohaghegh Ardabili",
       "orcid": "0000-0002-2969-8428",
       "type": "ProjectMember"
+    },
+    {
+      "name": "Kaffash Jamshid, Maryam",
+      "type": "ProjectMember"
     }
   ],
   "version": "23.0.0",
@@ -33,5 +37,5 @@
       "resource_type": "software"
     }
   ],
-  "notes": "Synthetic validation files are software-test fixtures, not certified reference materials. Users remain responsible for instrument calibration, model selection, and scientific interpretation."
+  "notes": "Corresponding creator: Ali Afruz. Synthetic validation files are software-test fixtures, not certified reference materials. Users remain responsible for instrument calibration, model selection, and scientific interpretation."
 }

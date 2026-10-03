@@ -14,8 +14,9 @@ provided in [`CITATION.cff`](CITATION.cff), while the scientific references for
 Pawley, Le Bail, Rietveld, profile, scattering-factor, and preferred-orientation
 methods are mapped in [`SCIENTIFIC_REFERENCES.md`](SCIENTIFIC_REFERENCES.md).
 
-Author metadata are recorded for Ali Afruz, University of Mohaghegh Ardabili,
-ORCID [0000-0002-2969-8428](https://orcid.org/0000-0002-2969-8428). The
+Creator order is Ali Afruz (corresponding creator; University of Mohaghegh
+Ardabili; ORCID [0000-0002-2969-8428](https://orcid.org/0000-0002-2969-8428)),
+followed by Maryam Kaffash Jamshid. The
 source repository is [AliAfruz/afruz-pxrd-analyzer](https://github.com/AliAfruz/afruz-pxrd-analyzer).
 The Zenodo DOI remains unset until Zenodo archives the first release. Follow
 [`PUBLISHING_GUIDE.md`](PUBLISHING_GUIDE.md) before making the package public.

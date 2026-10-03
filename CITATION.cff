@@ -9,6 +9,13 @@ authors:
     given-names: Ali
     affiliation: University of Mohaghegh Ardabili
     orcid: https://orcid.org/0000-0002-2969-8428
+  - family-names: Kaffash Jamshid
+    given-names: Maryam
+contact:
+  - family-names: Afruz
+    given-names: Ali
+    affiliation: University of Mohaghegh Ardabili
+    orcid: https://orcid.org/0000-0002-2969-8428
 version: 23.0.0
 date-released: 2026-10-03
 license: MIT
