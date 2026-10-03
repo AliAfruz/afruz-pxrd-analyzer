@@ -72,11 +72,11 @@ git push origin v23.0.0
 
 Zenodo provides both a version DOI and a concept DOI. Cite the version DOI for
 exact reproducibility and use the concept DOI in general project documentation.
-After the DOI exists:
+Release 23.0.0 has version DOI `10.5281/zenodo.23119993` and concept DOI
+`10.5281/zenodo.23119992`. For future releases:
 
-- add it to `CITATION.cff`;
-- add `doi` and `related_identifiers` to `.zenodo.json` as appropriate;
-- add a Zenodo DOI badge and repository URL to `README.md`;
+- add the new version DOI to `CITATION.cff`;
+- keep the concept DOI badge in `README.md`;
 - cite the exact archived version in manuscripts.
 
 Do not invent or pre-fill a DOI. Only Zenodo can assign it.

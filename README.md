@@ -1,6 +1,7 @@
 # Afruz PXRD Analyzer 23.0.0
 
 [![Windows tests](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml/badge.svg)](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23119992.svg)](https://doi.org/10.5281/zenodo.23119992)
 
 Afruz PXRD Analyzer is a Windows-focused PySide6 workbench for powder X-ray diffraction import, preprocessing, peak analysis, crystallographic matching, whole-pattern refinement, quantitative phase analysis, validation, and reproducible reporting.
 
@@ -18,8 +19,10 @@ Creator order is Ali Afruz (corresponding creator; University of Mohaghegh
 Ardabili; ORCID [0000-0002-2969-8428](https://orcid.org/0000-0002-2969-8428)),
 followed by Maryam Kaffash Jamshid. The
 source repository is [AliAfruz/afruz-pxrd-analyzer](https://github.com/AliAfruz/afruz-pxrd-analyzer).
-The Zenodo DOI remains unset until Zenodo archives the first release. Follow
-[`PUBLISHING_GUIDE.md`](PUBLISHING_GUIDE.md) before making the package public.
+Release 23.0.0 is archived under the version DOI
+[10.5281/zenodo.23119993](https://doi.org/10.5281/zenodo.23119993); the project
+concept DOI is [10.5281/zenodo.23119992](https://doi.org/10.5281/zenodo.23119992).
+Follow [`PUBLISHING_GUIDE.md`](PUBLISHING_GUIDE.md) for future releases.
 The complete release verification is recorded in
 [`RELEASE_AUDIT.md`](RELEASE_AUDIT.md), and fixture licensing/provenance is
 tracked in [`DATA_PROVENANCE.md`](DATA_PROVENANCE.md).

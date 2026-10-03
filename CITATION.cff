@@ -17,6 +17,7 @@ contact:
     affiliation: University of Mohaghegh Ardabili
     orcid: https://orcid.org/0000-0002-2969-8428
 version: 23.0.0
+doi: 10.5281/zenodo.23119993
 date-released: 2026-10-03
 license: MIT
 repository-code: https://github.com/AliAfruz/afruz-pxrd-analyzer
