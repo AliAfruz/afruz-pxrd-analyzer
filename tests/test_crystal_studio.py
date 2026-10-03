@@ -308,6 +308,29 @@ def test_smart_pore_recovers_all_symmetry_copies_from_local_framework():
     assert {site[1:3] for site in recovered} == {("Cr", "Cr1")}
 
 
+def test_preliminary_framework_classification_excludes_disconnected_solvent():
+    import afruz_pxrd.crystal_scene as scene_module
+
+    basis = cell_basis(dict(a=10, b=10, c=10, alpha=90, beta=90, gamma=90))
+    source_sites = []
+    for offset in (0.0, 0.5):
+        source_sites.extend([
+            (np.array([.10 + offset, .10, .10]), "Cr", "Cr1", 1.0),
+            (np.array([.20 + offset, .10, .10]), "O", "O1", 1.0),
+            (np.array([.30 + offset, .10, .10]), "C", "C1", 1.0),
+            (np.array([.40 + offset, .10, .10]), "C", "C2", 1.0),
+        ])
+    source_sites.append((np.array([.50, .80, .80]), "O", "Ow1", 1.0))
+    framework, identities = scene_module._metal_connected_framework_sites(
+        source_sites, basis
+    )
+    assert len(framework) == 8
+    assert identities == {
+        ("Cr", "Cr1"), ("O", "O1"), ("C", "C1"), ("C", "C2")
+    }
+    assert all(site[2] != "Ow1" for site in framework)
+
+
 def test_single_pore_keeps_requested_final_cage_family(monkeypatch):
     import afruz_pxrd.crystal_scene as scene_module
 

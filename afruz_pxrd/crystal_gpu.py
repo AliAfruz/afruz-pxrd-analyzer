@@ -20,6 +20,7 @@ from .crystal_scene import (
     ELEMENT_COLORS,
     MOF_PORE_STYLE,
     MOF_STYLE,
+    PORE_ORANGE_RGB,
     SCIENTIFIC_ELEMENT_COLORS,
     SCIENTIFIC_STYLE,
     display_radius,
@@ -184,7 +185,7 @@ def _pore_sphere_mesh(
     light = np.asarray((0.55, -0.45, 0.80), dtype=np.float32)
     light /= np.linalg.norm(light)
     brightness = 0.78 + 0.22 * np.clip(normals @ light, 0.0, 1.0)
-    base = np.asarray((1.0, 0.62, 0.015), dtype=np.float32)
+    base = np.asarray(PORE_ORANGE_RGB, dtype=np.float32)
     colors = np.empty((len(faces), 4), dtype=np.float32)
     colors[:, :3] = base[None, :] * brightness[:, None]
     colors[:, 3] = float(opacity)

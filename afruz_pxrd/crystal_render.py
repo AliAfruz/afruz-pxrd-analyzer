@@ -12,7 +12,7 @@ from PIL import Image, ImageColor, ImageDraw, ImageFont, PngImagePlugin
 
 from .crystal_scene import (
     CrystalScene, ELEMENT_COLORS, SCIENTIFIC_ELEMENT_COLORS, SCIENTIFIC_STYLE,
-    MOF_PORE_STYLE, MOF_STYLE,
+    MOF_PORE_STYLE, MOF_STYLE, PORE_ORANGE_HEX,
     display_radius, element_color, scene_document,
 )
 from .crystallography import ATOMIC_NUMBER
@@ -238,7 +238,7 @@ def render_crystal(scene: CrystalScene, width=1200, height=900, *, antialias=Tru
         canvas.sphere(
             center,
             radius,
-            _rgb("#f5b400"),
+            _rgb(PORE_ORANGE_HEX),
             opacity=settings.pore_opacity,
         )
 

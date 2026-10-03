@@ -32,6 +32,9 @@ SCIENTIFIC_STYLE = "Scientific • polyhedra + H-bonds"
 MOF_STYLE = "MOF • porous framework"
 MOF_PORE_STYLE = "MOF • isolated pore / cage"
 LEGACY_MOF_PORE_STYLE = "MOF • pore aperture [111]"
+# Shared CPU/GPU display convention for the illustrative pore envelope.
+PORE_ORANGE_HEX = "#ff9e04"
+PORE_ORANGE_RGB = (1.0, 0.62, 0.015)
 STYLES = (
     "Cinematic • midnight",
     "Publication • ivory",
@@ -545,6 +548,70 @@ def _complete_framework_pore_sites(
     return complete, len(identities) if used_complete_source else 0
 
 
+def _metal_connected_framework_sites(
+    source_sites: list[tuple[np.ndarray, str, str, float]],
+    basis: np.ndarray,
+) -> tuple[list[tuple[np.ndarray, str, str, float]], set[tuple[str, str]]]:
+    """Classify a symmetry-expanded MOF framework before pore centering.
+
+    A solvated conventional-cell CIF can place thousands of guest sites inside
+    the real cages.  Centering the preliminary crop on all sites then selects a
+    guest-dependent void rather than a framework cage.  Infer conservative
+    covalent-radius contacts in the complete cell, retain components containing
+    a metal node, and project their accepted CIF labels back across every
+    symmetry-equivalent copy.  The result is a visualization classification;
+    it does not modify the stored CIF or claim refined bond orders.
+    """
+    if len(source_sites) < 4:
+        return [], set()
+    positions = np.asarray(
+        [np.mod(np.asarray(site[0], dtype=float), 1.0) @ basis for site in source_sites]
+    )
+    pairs = cKDTree(positions).query_pairs(4.5, output_type="ndarray")
+    pairs = np.asarray(pairs, dtype=int).reshape(-1, 2)
+    contacts: list[tuple[int, int]] = []
+    if len(pairs):
+        distances = np.linalg.norm(
+            positions[pairs[:, 0]] - positions[pairs[:, 1]], axis=1
+        )
+        for (first, second), distance in zip(pairs, distances):
+            left = str(source_sites[int(first)][1])
+            right = str(source_sites[int(second)][1])
+            if left in METAL_ELEMENTS and right in METAL_ELEMENTS:
+                continue
+            cutoff = 1.24 * (
+                COVALENT_RADII.get(left, 1.0)
+                + COVALENT_RADII.get(right, 1.0)
+            )
+            if 0.35 <= float(distance) <= cutoff:
+                contacts.append((int(first), int(second)))
+    components = _bond_components(len(source_sites), contacts)
+    framework_indices = {
+        index
+        for component in components
+        if len(component) >= 4
+        and any(
+            str(source_sites[index][1]) in METAL_ELEMENTS
+            for index in component
+        )
+        for index in component
+    }
+    identities = {
+        (str(source_sites[index][1]), str(source_sites[index][2]))
+        for index in framework_indices
+    }
+    if not identities:
+        return [], set()
+    return (
+        [
+            site
+            for site in source_sites
+            if (str(site[1]), str(site[2])) in identities
+        ],
+        identities,
+    )
+
+
 def _smart_mof_cage_indices(
     positions: np.ndarray,
     elements: list[str],
@@ -808,14 +875,38 @@ def build_scene(model: dict, settings: RenderSettings) -> CrystalScene:
                 raise CrystalSceneError(
                     f"This view exceeds {atom_limit:,} atoms. Reduce repeat counts or hide hydrogen atoms."
                 )
+    preliminary_pore_sites = pore_source_sites
+    source_identity_count = len({
+        (str(site[1]), str(site[2])) for site in pore_source_sites
+    })
+    symmetry_expanded_model = bool(
+        len(model.get("symmetry_operations") or []) > 1
+        and len(pore_source_sites) > 4 * max(1, source_identity_count)
+    )
+    if (
+        settings.isolate_pore
+        and settings.smart_pore_isolation
+        and symmetry_expanded_model
+    ):
+        framework_seed_sites, framework_seed_identities = (
+            _metal_connected_framework_sites(pore_source_sites, basis)
+        )
+        if len(framework_seed_sites) >= 4:
+            preliminary_pore_sites = framework_seed_sites
+            warnings.append(
+                f"Preliminary pore centering used {len(framework_seed_sites):,} "
+                f"symmetry-expanded sites from {len(framework_seed_identities):,} "
+                "metal-connected CIF site families, excluding disconnected "
+                "guest/solvent families."
+            )
     # A pore cage frequently crosses every face of a primitive cell. A radial
     # crop of only the displayed unit cell therefore produces broken linkers
     # and incomplete metal nodes (especially UiO-type primitive P1 models).
     # Build a bounded periodic neighbourhood around a preliminary void center;
     # the later topology crop selects the final cage from this complete graph.
-    if settings.isolate_pore and pore_source_sites:
+    if settings.isolate_pore and preliminary_pore_sites:
         preliminary_centers, preliminary_radii = _pore_envelopes_from_sites(
-            pore_source_sites,
+            preliminary_pore_sites,
             basis,
             settings.pore_probe_radius,
             settings.pore_max_count,
@@ -1270,65 +1361,83 @@ def build_scene(model: dict, settings: RenderSettings) -> CrystalScene:
         discarded_radial_count = 0
         keep = set()
         if settings.smart_pore_isolation and bonds:
-            cage_selection = _smart_mof_cage_indices(
-                positions,
-                elements,
-                bonds,
-                distances,
-                outer_radius,
-                closure_limit,
+            symmetry_complete_shell = bool(
+                symmetry_expanded_model
+                and framework_site_identities
             )
-            if cage_selection is not None:
-                keep, topology_fragment_count = cage_selection
-                topology_description = "node-to-node organic linker fragment(s)"
-                discarded_radial_count = len(initial - keep)
-            else:
-                candidates = set(
-                    np.flatnonzero(distances <= closure_limit).tolist()
-                )
-                # A large/disordered conventional MOF CIF can split one real
-                # framework into many display-contact components.  The
-                # complete-cell identities recovered above are stronger
-                # evidence than requiring every linker to survive that
-                # heuristic graph.  Retain those framework-labelled sites
-                # within the closure shell; guest/solvent identities remain
-                # excluded.  This prevents a visually tiny metal fragment from
-                # being shown around an otherwise correctly detected pore.
-                identity_framework = {
+            candidates = set(
+                np.flatnonzero(distances <= closure_limit).tolist()
+            )
+            if symmetry_complete_shell:
+                # Conventional high-symmetry MOF cells repeat each asymmetric
+                # CIF label many times.  A graph-only cage extraction can keep
+                # one chemically connected arc while dropping the other
+                # symmetry-equivalent walls.  Keep the complete framework-
+                # labelled radial shell instead: this yields the closed,
+                # polyhedral MIL-101 cage while still excluding guest/solvent
+                # labels identified above.
+                keep = {
                     index
                     for index in candidates
                     if (str(elements[index]), str(labels[index]))
                     in framework_site_identities
                 }
-                if identity_framework:
-                    keep.update(identity_framework)
-                    topology_fragment_count = len(framework_site_identities)
-                    topology_description = "complete-cell framework site family/families"
+                topology_fragment_count = len(framework_site_identities)
+                topology_description = "symmetry-expanded framework site family/families"
+                discarded_radial_count = len(initial - keep)
+            else:
+                cage_selection = _smart_mof_cage_indices(
+                    positions,
+                    elements,
+                    bonds,
+                    distances,
+                    outer_radius,
+                    closure_limit,
+                )
+                if cage_selection is not None:
+                    keep, topology_fragment_count = cage_selection
+                    topology_description = "node-to-node organic linker fragment(s)"
                     discarded_radial_count = len(initial - keep)
                 else:
-                    candidate_components = _bond_components(
-                        len(positions), bonds, candidates
-                    )
-                    framework_has_metal = any(
-                        len(component) >= 4
-                        and any(elements[index] in METAL_ELEMENTS for index in component)
-                        for component in candidate_components
-                    )
-                    accepted = []
-                    for component in candidate_components:
-                        if not any(index in initial for index in component):
-                            continue
-                        if framework_has_metal:
-                            if not any(
-                                elements[index] in METAL_ELEMENTS for index in component
-                            ):
+                    # A large/disordered CIF can split one real framework into
+                    # several display-contact components.  The complete-cell
+                    # identities recovered above are stronger evidence than
+                    # requiring every linker to survive that heuristic graph.
+                    identity_framework = {
+                        index
+                        for index in candidates
+                        if (str(elements[index]), str(labels[index]))
+                        in framework_site_identities
+                    }
+                    if identity_framework:
+                        keep.update(identity_framework)
+                        topology_fragment_count = len(framework_site_identities)
+                        topology_description = "complete-cell framework site family/families"
+                        discarded_radial_count = len(initial - keep)
+                    else:
+                        candidate_components = _bond_components(
+                            len(positions), bonds, candidates
+                        )
+                        framework_has_metal = any(
+                            len(component) >= 4
+                            and any(elements[index] in METAL_ELEMENTS for index in component)
+                            for component in candidate_components
+                        )
+                        accepted = []
+                        for component in candidate_components:
+                            if not any(index in initial for index in component):
                                 continue
-                        elif len(component) < 4:
-                            continue
-                        accepted.append(component)
-                        keep.update(component)
-                    topology_fragment_count = len(accepted)
-                    discarded_radial_count = len(initial - keep)
+                            if framework_has_metal:
+                                if not any(
+                                    elements[index] in METAL_ELEMENTS for index in component
+                                ):
+                                    continue
+                            elif len(component) < 4:
+                                continue
+                            accepted.append(component)
+                            keep.update(component)
+                        topology_fragment_count = len(accepted)
+                        discarded_radial_count = len(initial - keep)
         if not keep:
             # Conservative fallback for molecular/metal-free structures whose
             # CIF connectivity cannot be inferred from the display contacts.

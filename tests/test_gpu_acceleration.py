@@ -16,7 +16,9 @@ from afruz_pxrd.crystal_gpu import (
     _pore_sphere_mesh,
     export_gpu_crystal,
 )
-from afruz_pxrd.crystal_scene import RenderSettings, build_scene, model_from_structure
+from afruz_pxrd.crystal_scene import (
+    PORE_ORANGE_RGB, RenderSettings, build_scene, model_from_structure,
+)
 from afruz_pxrd.rietveld_refinement import RietveldPhaseSpec, refine_rietveld
 from afruz_pxrd.whole_pattern_refinement import (
     _build_peak_basis,
@@ -173,12 +175,15 @@ def test_gpu_large_single_pore_atoms_use_driver_safe_batches():
     assert sum(stop - start for start, stop in batches) == 1014
 
 
-def test_gpu_pore_sphere_is_dense_gold_and_preserves_opacity():
+def test_gpu_pore_sphere_is_dense_orange_gold_and_preserves_opacity():
     faces, colors = _pore_sphere_mesh(np.asarray([1.0, 2.0, 3.0]), 15.79, 0.88)
     assert faces.shape == (1280, 3, 3)
     assert colors.shape == (1280, 4)
     assert colors[:, 0].min() > colors[:, 1].max()
-    assert colors[:, 2].max() < 0.02
+    assert colors[:, 1].min() > colors[:, 2].max()
+    assert colors[:, :3].max(axis=0) == pytest.approx(
+        PORE_ORANGE_RGB, abs=.02
+    )
     assert colors[:, 3] == pytest.approx(0.88)
 
 
