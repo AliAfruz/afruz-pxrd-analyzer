@@ -280,6 +280,74 @@ def test_smart_pore_mode_excludes_disconnected_guest_sites(monkeypatch):
     assert any("rejected 1 disconnected radial site" in warning for warning in scene.warnings)
 
 
+def test_smart_pore_recovers_all_symmetry_copies_from_local_framework():
+    import afruz_pxrd.crystal_scene as scene_module
+
+    source_sites = [
+        (np.array([x, y, z]), "Cr", "Cr1", 1.0)
+        for x in (.1, .9)
+        for y in (.1, .9)
+        for z in (.1, .9)
+    ] + [
+        (np.array([.5, .5, .5]), "O", "guest", 1.0),
+    ]
+    # A bounded neighbourhood around one pore contains only some symmetry
+    # copies.  The site identity must recover all accepted Cr1 copies from the
+    # complete source cell without reintroducing the disconnected guest.
+    fractional = np.array([site[0] for site in source_sites[:4]])
+    recovered, identity_count = scene_module._complete_framework_pore_sites(
+        source_sites,
+        fractional,
+        ["Cr"] * 4,
+        ["Cr1"] * 4,
+        [1.0] * 4,
+        set(range(4)),
+    )
+    assert identity_count == 1
+    assert len(recovered) == 8
+    assert {site[1:3] for site in recovered} == {("Cr", "Cr1")}
+
+
+def test_single_pore_keeps_requested_final_cage_family(monkeypatch):
+    import afruz_pxrd.crystal_scene as scene_module
+
+    monkeypatch.setattr(
+        scene_module,
+        "_pore_envelopes_from_sites",
+        lambda *args, **kwargs: ([np.array([5.0, 5.0, 5.0])], [2.5]),
+    )
+    monkeypatch.setattr(
+        scene_module,
+        "_detect_pore_envelopes",
+        lambda *args, **kwargs: (
+            [np.array([5.0, 5.0, 5.0]), np.array([5.0, 5.0, 5.0])],
+            [6.0, 2.6],
+        ),
+    )
+    model = model_from_structure({
+        "data_name": "Two cage families",
+        "cell": dict(a=10, b=10, c=10, alpha=90, beta=90, gamma=90),
+        "atoms": [
+            {"element": "Cr", "label": "Cr1", "x": .5, "y": .5, "z": .8, "occupancy": 1},
+            {"element": "O", "label": "O1", "x": .5, "y": .5, "z": .9, "occupancy": 1},
+        ],
+    })
+    scene = build_scene(
+        model,
+        RenderSettings(
+            style=MOF_STYLE,
+            repeats=(1, 1, 1),
+            polyhedra=False,
+            isolate_pore=True,
+            smart_pore_isolation=False,
+            pore_max_count=2,
+            isolated_pore_index=0,
+            pore_shell_thickness=4.0,
+        ),
+    )
+    assert scene.pore_radii == [6.0]
+
+
 def test_atom_opacity_changes_cpu_raster_alpha():
     model = model_from_structure({
         "data_name": "Transparent atom",

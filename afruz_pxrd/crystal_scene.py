@@ -485,6 +485,66 @@ def _bond_components(
     return components
 
 
+def _complete_framework_pore_sites(
+    source_sites: list[tuple[np.ndarray, str, str, float]],
+    fractional: np.ndarray,
+    elements: list[str],
+    labels: list[str],
+    occupancies: list[float],
+    framework_indices: set[int],
+) -> tuple[list[tuple[np.ndarray, str, str, float]], int]:
+    """Recover a complete unit-cell framework from a local periodic crop.
+
+    Single-pore mode first builds a bounded periodic neighbourhood so that
+    bonds crossing a cell face can be classified.  The connected component is
+    consequently only a *local* fragment.  Feeding those local coordinates to
+    a periodic void search leaves most of a large conventional cell empty and
+    can create a fictitious sphere almost half a cell wide.  CIF atom labels
+    identify all symmetry-expanded copies of the accepted framework sites, so
+    use them to project the classification back onto the complete source cell.
+
+    The coordinate fallback retains support for hand-built/legacy models whose
+    labels are absent or ambiguous.  Returned sites are always deduplicated in
+    the crystallographic unit cell.
+    """
+    identities = {
+        (str(elements[index]), str(labels[index]))
+        for index in framework_indices
+    }
+    recovered = [
+        site
+        for site in source_sites
+        if (str(site[1]), str(site[2])) in identities
+    ]
+    used_complete_source = bool(recovered)
+    if not recovered:
+        recovered = [
+            (
+                np.mod(np.asarray(fractional[index], dtype=float), 1.0),
+                elements[index],
+                labels[index],
+                occupancies[index],
+            )
+            for index in sorted(framework_indices)
+        ]
+
+    complete: list[tuple[np.ndarray, str, str, float]] = []
+    seen = set()
+    for frac, element, label, occupancy in recovered:
+        frac = np.mod(np.asarray(frac, dtype=float), 1.0)
+        frac[np.isclose(frac, 1.0, atol=1e-7, rtol=0)] = 0.0
+        key = (
+            str(element),
+            str(label),
+            *np.round(frac, 7),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        complete.append((frac, str(element), str(label), float(occupancy)))
+    return complete, len(identities) if used_complete_source else 0
+
+
 def _smart_mof_cage_indices(
     positions: np.ndarray,
     elements: list[str],
@@ -767,12 +827,23 @@ def build_scene(model: dict, settings: RenderSettings) -> CrystalScene:
             preliminary_radius = float(
                 preliminary_radii[settings.isolated_pore_index]
             )
-            # 2.5 Å is the topology closure used below; the extra margin keeps
-            # complete metal coordination shells and terminal linker atoms.
+            # 2.5 Å is the topology closure used below.  In a solvated or
+            # disordered MOF the all-site preliminary sphere can be much
+            # smaller than the later framework-only sphere, so scale an extra
+            # safety margin with the cell instead of assuming a fixed 4 Å.
+            # This ensures the second pass actually has the complete shell it
+            # may need (MIL-101 is a representative large-cell case).
+            longest_lattice_scale = max(
+                float(np.linalg.norm(vector)) for vector in basis
+            )
+            pore_neighbourhood_margin = max(
+                4.0,
+                min(16.0, 0.15 * longest_lattice_scale),
+            )
             neighbourhood_radius = (
                 preliminary_radius
                 + float(settings.pore_shell_thickness)
-                + 4.0
+                + pore_neighbourhood_margin
             )
             smallest_lattice_scale = max(
                 0.5, float(np.min(np.linalg.svd(basis, compute_uv=False)))
@@ -1041,6 +1112,7 @@ def build_scene(model: dict, settings: RenderSettings) -> CrystalScene:
             hydrogen_bonds = [(remap[i], remap[j]) for i, j in hydrogen_bonds]
     pore_centers: list[np.ndarray] = []
     pore_radii: list[float] = []
+    framework_site_identities: set[tuple[str, str]] = set()
     if settings.pore_volumes or settings.isolate_pore:
         pore_detection_sites = pore_source_sites
         if settings.isolate_pore and settings.smart_pore_isolation:
@@ -1064,36 +1136,55 @@ def build_scene(model: dict, settings: RenderSettings) -> CrystalScene:
             framework_indices = {
                 index for component in framework_components for index in component
             }
-            framework_sites = []
-            framework_seen = set()
-            for index in sorted(framework_indices):
-                frac = np.mod(np.asarray(fractional[index], dtype=float), 1.0)
-                frac[np.isclose(frac, 1.0, atol=1e-7, rtol=0)] = 0.0
-                key = (elements[index], *np.round(frac, 7))
-                if key in framework_seen:
-                    continue
-                framework_seen.add(key)
-                framework_sites.append(
-                    (frac, elements[index], labels[index], occupancies[index])
+            framework_site_identities = {
+                (str(elements[index]), str(labels[index]))
+                for index in framework_indices
+            }
+            framework_sites, recovered_identity_count = (
+                _complete_framework_pore_sites(
+                    pore_source_sites,
+                    fractional,
+                    elements,
+                    labels,
+                    occupancies,
+                    framework_indices,
                 )
+            )
             if len(framework_sites) >= 4:
                 pore_detection_sites = framework_sites
+                recovery_note = (
+                    f" Recovered the complete unit-cell population for "
+                    f"{recovered_identity_count:,} accepted CIF site label(s) "
+                    "before periodic void analysis."
+                    if recovered_identity_count
+                    else ""
+                )
                 warnings.append(
                     f"Smart pore detection used {len(framework_sites):,} unique "
                     f"sites from {len(framework_components):,} {framework_kind} "
                     "framework fragment(s), excluding disconnected guest, solvent "
                     "and disorder sites from the void estimate."
+                    + recovery_note
                 )
             else:
                 warnings.append(
                     "Smart framework-only pore detection could not identify a "
                     "bonded framework, so all occupied CIF sites were used."
                 )
+        # Isolation needs more internal candidates than the number ultimately
+        # displayed.  Large symmetric MOFs contain several equivalent copies
+        # of each cage family; keeping only two size representatives can leave
+        # no equivalent close to the periodic neighbourhood assembled above.
+        detection_count = (
+            max(settings.pore_max_count, 24)
+            if settings.isolate_pore
+            else settings.pore_max_count
+        )
         unit_centers, unit_radii = _detect_pore_envelopes(
             pore_detection_sites,
             basis,
             settings.pore_probe_radius,
-            settings.pore_max_count,
+            detection_count,
         )
         if (
             settings.isolate_pore
@@ -1111,27 +1202,31 @@ def build_scene(model: dict, settings: RenderSettings) -> CrystalScene:
                     np.round(delta_fractional) @ basis
                 )
                 equivalents.append((equivalent, float(radius)))
-            matched = min(
-                range(len(equivalents)),
-                key=lambda index: (
-                    abs(equivalents[index][1] - preliminary_radius),
-                    float(np.linalg.norm(equivalents[index][0] - preliminary_center)),
-                ),
-            )
             requested = settings.isolated_pore_index
             if requested < len(unit_centers):
-                if matched != requested:
-                    unit_centers[requested], unit_centers[matched] = (
-                        equivalents[matched][0],
-                        unit_centers[requested],
-                    )
-                    unit_radii[requested], unit_radii[matched] = (
-                        equivalents[matched][1],
-                        unit_radii[requested],
-                    )
-                else:
-                    unit_centers[requested] = equivalents[matched][0]
-                    unit_radii[requested] = equivalents[matched][1]
+                # Preserve the requested final cage-size family (index zero is
+                # the largest), then choose its symmetry-equivalent occurrence
+                # closest to the preliminary neighborhood.  Matching by the
+                # smaller guest-filled preliminary radius selected the wrong
+                # MIL-101 cage family and produced a one-sided crop.
+                target_radius = float(unit_radii[requested])
+                same_family = [
+                    index
+                    for index, (_center, radius) in enumerate(equivalents)
+                    if abs(radius - target_radius) <= 0.50
+                ]
+                matched = min(
+                    same_family or list(range(len(equivalents))),
+                    key=lambda index: float(
+                        np.linalg.norm(
+                            equivalents[index][0] - preliminary_center
+                        )
+                    ),
+                )
+                unit_centers[requested] = equivalents[matched][0]
+                unit_radii[requested] = equivalents[matched][1]
+            unit_centers = unit_centers[: settings.pore_max_count]
+            unit_radii = unit_radii[: settings.pore_max_count]
         for shift in product(*(range(int(n)) for n in repeats)):
             translation = np.asarray(shift, dtype=float) @ basis
             for center, radius in zip(unit_centers, unit_radii):
@@ -1191,29 +1286,49 @@ def build_scene(model: dict, settings: RenderSettings) -> CrystalScene:
                 candidates = set(
                     np.flatnonzero(distances <= closure_limit).tolist()
                 )
-                candidate_components = _bond_components(
-                    len(positions), bonds, candidates
-                )
-                framework_has_metal = any(
-                    len(component) >= 4
-                    and any(elements[index] in METAL_ELEMENTS for index in component)
-                    for component in candidate_components
-                )
-                accepted = []
-                for component in candidate_components:
-                    if not any(index in initial for index in component):
-                        continue
-                    if framework_has_metal:
-                        if not any(
-                            elements[index] in METAL_ELEMENTS for index in component
-                        ):
+                # A large/disordered conventional MOF CIF can split one real
+                # framework into many display-contact components.  The
+                # complete-cell identities recovered above are stronger
+                # evidence than requiring every linker to survive that
+                # heuristic graph.  Retain those framework-labelled sites
+                # within the closure shell; guest/solvent identities remain
+                # excluded.  This prevents a visually tiny metal fragment from
+                # being shown around an otherwise correctly detected pore.
+                identity_framework = {
+                    index
+                    for index in candidates
+                    if (str(elements[index]), str(labels[index]))
+                    in framework_site_identities
+                }
+                if identity_framework:
+                    keep.update(identity_framework)
+                    topology_fragment_count = len(framework_site_identities)
+                    topology_description = "complete-cell framework site family/families"
+                    discarded_radial_count = len(initial - keep)
+                else:
+                    candidate_components = _bond_components(
+                        len(positions), bonds, candidates
+                    )
+                    framework_has_metal = any(
+                        len(component) >= 4
+                        and any(elements[index] in METAL_ELEMENTS for index in component)
+                        for component in candidate_components
+                    )
+                    accepted = []
+                    for component in candidate_components:
+                        if not any(index in initial for index in component):
                             continue
-                    elif len(component) < 4:
-                        continue
-                    accepted.append(component)
-                    keep.update(component)
-                topology_fragment_count = len(accepted)
-                discarded_radial_count = len(initial - keep)
+                        if framework_has_metal:
+                            if not any(
+                                elements[index] in METAL_ELEMENTS for index in component
+                            ):
+                                continue
+                        elif len(component) < 4:
+                            continue
+                        accepted.append(component)
+                        keep.update(component)
+                    topology_fragment_count = len(accepted)
+                    discarded_radial_count = len(initial - keep)
         if not keep:
             # Conservative fallback for molecular/metal-free structures whose
             # CIF connectivity cannot be inferred from the display contacts.
