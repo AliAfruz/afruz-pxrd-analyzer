@@ -6,13 +6,14 @@
     {
       "name": "Afruz, Ali",
       "affiliation": "University of Mohaghegh Ardabili",
-      "orcid": "0000-0002-2969-8428"
+      "orcid": "0000-0002-2969-8428",
+      "type": "ProjectMember"
     }
   ],
   "version": "23.0.0",
   "publication_date": "2026-10-03",
   "access_right": "open",
-  "license": "MIT",
+  "license": "mit",
   "language": "eng",
   "keywords": [
     "powder X-ray diffraction",
@@ -24,6 +25,13 @@
     "materials characterization",
     "metal-organic frameworks",
     "Python"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/AliAfruz/afruz-pxrd-analyzer",
+      "relation": "isSupplementTo",
+      "resource_type": "software"
+    }
   ],
   "notes": "Synthetic validation files are software-test fixtures, not certified reference materials. Users remain responsible for instrument calibration, model selection, and scientific interpretation."
 }

@@ -36,12 +36,12 @@ Create an empty public repository named `afruz-pxrd-analyzer`. Do not initialize
 it with a second README or license. Then run from this release folder:
 
 ```powershell
-git remote add origin https://github.com/YOUR_ACCOUNT/afruz-pxrd-analyzer.git
+git remote add origin https://github.com/AliAfruz/afruz-pxrd-analyzer.git
 git push -u origin main
 ```
 
-Replace `YOUR_ACCOUNT` with the real account name. Add the final repository URL
-to `CITATION.cff`, `.zenodo.json`, and `pyproject.toml` after it exists.
+The repository URL is already recorded in `CITATION.cff`, `.zenodo.json`, and
+`pyproject.toml`.
 
 Recommended repository settings:
 

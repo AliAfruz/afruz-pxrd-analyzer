@@ -32,6 +32,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Chemistry",
   "Topic :: Scientific/Engineering :: Physics",
 ]
+
 dependencies = [
   "PySide6>=6.7",
   "pyqtgraph>=0.13",
@@ -43,6 +44,11 @@ dependencies = [
   "Pillow>=10.0",
   "reportlab>=4.2",
 ]
+
+[project.urls]
+Homepage = "https://github.com/AliAfruz/afruz-pxrd-analyzer"
+Repository = "https://github.com/AliAfruz/afruz-pxrd-analyzer"
+Issues = "https://github.com/AliAfruz/afruz-pxrd-analyzer/issues"
 
 [project.optional-dependencies]
 gpu = [

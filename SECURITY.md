@@ -8,9 +8,8 @@ initial archived release covered by this policy.
 ## Reporting a vulnerability
 
 Do not include private data, credentials, or an unpatched exploit in a public
-issue. After the GitHub repository is created, enable GitHub private
-vulnerability reporting and use that channel. Until then, contact the
-maintainer through the contact method recorded on the Zenodo deposit.
+issue. Enable GitHub private vulnerability reporting, then use the repository's
+[private security advisory form](https://github.com/AliAfruz/afruz-pxrd-analyzer/security/advisories/new).
 
 Include the affected version, operating system, reproduction steps, potential
 impact, and any proposed mitigation. Scientific disagreements or refinement

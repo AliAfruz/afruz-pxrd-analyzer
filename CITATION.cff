@@ -12,6 +12,8 @@ authors:
 version: 23.0.0
 date-released: 2026-10-03
 license: MIT
+repository-code: https://github.com/AliAfruz/afruz-pxrd-analyzer
+url: https://github.com/AliAfruz/afruz-pxrd-analyzer
 abstract: >-
   A Windows-focused Python and PySide6 workbench for powder X-ray diffraction
   import, preprocessing, peak analysis, Pawley and Le Bail whole-pattern
