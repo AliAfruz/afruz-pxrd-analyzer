@@ -1,0 +1,48 @@
+name: Software bug
+description: Report reproducible incorrect behavior or a crash
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not upload confidential or unpublished research data.
+  - type: input
+    id: version
+    attributes:
+      label: Afruz PXRD version
+      placeholder: 23.0.0
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Windows and Python versions
+      placeholder: Windows 11; Python 3.12.14
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Include the workspace, settings, and smallest shareable input.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and traceback
+    validations:
+      required: true
+  - type: checkboxes
+    id: data
+    attributes:
+      label: Data safety
+      options:
+        - label: I removed private, identifying, or unpublished information.
+          required: true

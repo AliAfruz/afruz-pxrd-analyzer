@@ -1,0 +1,27 @@
+include LICENSE
+include CITATION.cff
+include .zenodo.json
+include README.md
+include CHANGELOG.md
+include AUTHORS.md
+include CONTRIBUTING.md
+include SECURITY.md
+include SCIENTIFIC_REFERENCES.md
+include PUBLISHING_GUIDE.md
+include RELEASE_AUDIT.md
+include DATA_PROVENANCE.md
+include LOCAL_REFERENCE_DATA.md
+include *.md
+include main.py
+include xrd_refinement_to_word.py
+include requirements*.txt
+include pytest.ini
+include .coveragerc
+include *.ps1
+include *.bat
+include *.sh
+recursive-include tests *.py *.cif *.txt
+recursive-include Afruz_PXRD_Synthetic_Test_Set *.txt *.cif
+recursive-include Afruz_PXRD_Statistical_Validation_Set *.txt *.cif
+recursive-include tools *.py
+global-exclude __pycache__ *.py[cod] *.zip .coverage

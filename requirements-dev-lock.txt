@@ -1,0 +1,9 @@
+-r requirements-lock.txt
+coverage==7.15.4
+iniconfig==2.3.0
+pluggy==1.6.0
+Pygments==2.20.0
+pytest==9.1.1
+pytest-cov==7.1.0
+pytest-qt==4.5.0
+typing_extensions==4.16.0

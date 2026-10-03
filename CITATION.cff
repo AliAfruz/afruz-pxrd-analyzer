@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: >-
+  If you use Afruz PXRD Analyzer in published work, cite this software release
+  and the primary methodological references for the refinement methods used.
+title: Afruz PXRD Analyzer
+type: software
+authors:
+  - family-names: Afruz
+    given-names: Ali
+    affiliation: University of Mohaghegh Ardabili
+    orcid: https://orcid.org/0000-0002-2969-8428
+version: 23.0.0
+date-released: 2026-10-03
+license: MIT
+abstract: >-
+  A Windows-focused Python and PySide6 workbench for powder X-ray diffraction
+  import, preprocessing, peak analysis, Pawley and Le Bail whole-pattern
+  extraction, Rietveld refinement, quantitative phase analysis, validation,
+  doping-series comparison, reproducible export, and crystallographic
+  visualization.
+keywords:
+  - powder X-ray diffraction
+  - PXRD
+  - Pawley refinement
+  - Le Bail refinement
+  - Rietveld refinement
+  - crystallography
+  - materials characterization
+  - metal-organic frameworks
+  - Python

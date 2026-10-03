@@ -1,0 +1,39 @@
+# Project-generated hypothetical structure for software testing only.
+# This is not an experimental structure, certified reference material,
+# or representation of a named chemical compound.
+data_synthetic_cr_organic_framework
+_audit_creation_method 'Afruz PXRD deterministic software-test fixture'
+_chemical_name_common 'Hypothetical periodic Cr-organic test framework'
+_cell_length_a 10.0000
+_cell_length_b 10.0000
+_cell_length_c 10.0000
+_cell_angle_alpha 90.0000
+_cell_angle_beta 90.0000
+_cell_angle_gamma 90.0000
+_symmetry_space_group_name_H-M 'P 1'
+loop_
+_symmetry_equiv_pos_as_xyz
+'x,y,z'
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+Cr1 Cr 0.0000 0.0000 0.0000 1.0
+OX1 O  0.2000 0.0000 0.0000 1.0
+CX1 C  0.3400 0.0000 0.0000 1.0
+CX2 C  0.5000 0.0000 0.0000 1.0
+CX3 C  0.6600 0.0000 0.0000 1.0
+OX2 O  0.8000 0.0000 0.0000 1.0
+OY1 O  0.0000 0.2000 0.0000 1.0
+CY1 C  0.0000 0.3400 0.0000 1.0
+CY2 C  0.0000 0.5000 0.0000 1.0
+CY3 C  0.0000 0.6600 0.0000 1.0
+OY2 O  0.0000 0.8000 0.0000 1.0
+OZ1 O  0.0000 0.0000 0.2000 1.0
+CZ1 C  0.0000 0.0000 0.3400 1.0
+CZ2 C  0.0000 0.0000 0.5000 1.0
+CZ3 C  0.0000 0.0000 0.6600 1.0
+OZ2 O  0.0000 0.0000 0.8000 1.0

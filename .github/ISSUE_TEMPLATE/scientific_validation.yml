@@ -1,0 +1,44 @@
+name: Scientific validation issue
+description: Report a numerical discrepancy or propose a reference comparison
+title: "[Validation]: "
+labels: [scientific-validation]
+body:
+  - type: input
+    id: method
+    attributes:
+      label: Method or workspace
+      placeholder: Rietveld refinement, structure-factor calculation, peak search
+    validations:
+      required: true
+  - type: textarea
+    id: inputs
+    attributes:
+      label: Input and instrument model
+      description: State wavelength, geometry, range, weighting, profile, background, constraints, and refined parameters.
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Independent reference
+      description: Give the program, version, settings, publication, standard, or analytical result used for comparison.
+    validations:
+      required: true
+  - type: textarea
+    id: discrepancy
+    attributes:
+      label: Numerical discrepancy
+      description: Include units, expected value, observed value, and tolerance.
+    validations:
+      required: true
+  - type: checkboxes
+    id: interpretation
+    attributes:
+      label: Scientific checks
+      options:
+        - label: I compared more than a single scalar R factor.
+          required: true
+        - label: I inspected the observed, calculated, and difference profiles.
+          required: true
+        - label: I can legally share every attached data file.
+          required: true

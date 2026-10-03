@@ -1,0 +1,6 @@
+# Optional NVIDIA CUDA/OpenGL acceleration for Windows.
+# This reuses an installed CUDA 13.x toolkit; it does not bundle a second toolkit.
+cupy-cuda13x==14.2.0
+cuda-pathfinder==1.8.2
+PyOpenGL==3.1.10
+PyOpenGL-accelerate==3.1.10

@@ -1,0 +1,29 @@
+{
+  "title": "Afruz PXRD Analyzer",
+  "description": "A Windows-focused Python and PySide6 workbench for powder X-ray diffraction import, preprocessing, peak analysis, Pawley and Le Bail whole-pattern extraction, Rietveld refinement, quantitative phase analysis, validation, doping-series comparison, reproducible export, and crystallographic visualization.",
+  "upload_type": "software",
+  "creators": [
+    {
+      "name": "Afruz, Ali",
+      "affiliation": "University of Mohaghegh Ardabili",
+      "orcid": "0000-0002-2969-8428"
+    }
+  ],
+  "version": "23.0.0",
+  "publication_date": "2026-10-03",
+  "access_right": "open",
+  "license": "MIT",
+  "language": "eng",
+  "keywords": [
+    "powder X-ray diffraction",
+    "PXRD",
+    "Pawley refinement",
+    "Le Bail refinement",
+    "Rietveld refinement",
+    "crystallography",
+    "materials characterization",
+    "metal-organic frameworks",
+    "Python"
+  ],
+  "notes": "Synthetic validation files are software-test fixtures, not certified reference materials. Users remain responsible for instrument calibration, model selection, and scientific interpretation."
+}

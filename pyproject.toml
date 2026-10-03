@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "afruz-pxrd-analyzer"
+dynamic = ["version"]
+description = "Desktop workbench for powder X-ray diffraction analysis and refinement"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+  { name = "Ali Afruz" }
+]
+keywords = [
+  "PXRD",
+  "powder diffraction",
+  "Pawley",
+  "Le Bail",
+  "Rietveld",
+  "crystallography",
+  "materials science",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: Microsoft :: Windows :: Windows 10",
+  "Operating System :: Microsoft :: Windows :: Windows 11",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Chemistry",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+  "PySide6>=6.7",
+  "pyqtgraph>=0.13",
+  "numpy>=1.26",
+  "scipy>=1.12",
+  "pandas>=2.2",
+  "openpyxl>=3.1",
+  "matplotlib>=3.8",
+  "Pillow>=10.0",
+  "reportlab>=4.2",
+]
+
+[project.optional-dependencies]
+gpu = [
+  "cupy-cuda13x==14.2.0",
+  "cuda-pathfinder==1.8.2",
+  "PyOpenGL==3.1.10",
+  "PyOpenGL-accelerate==3.1.10",
+]
+test = [
+  "coverage==7.15.4",
+  "pytest==9.1.1",
+  "pytest-cov==7.1.0",
+  "pytest-qt==4.5.0",
+]
+
+[project.gui-scripts]
+afruz-pxrd = "afruz_pxrd.app:run"
+
+[tool.setuptools.dynamic]
+version = { attr = "afruz_pxrd.version.APP_VERSION" }
+
+[tool.setuptools.packages.find]
+include = ["afruz_pxrd*"]
+
+[tool.setuptools]
+include-package-data = true
