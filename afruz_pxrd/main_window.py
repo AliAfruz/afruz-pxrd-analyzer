@@ -262,6 +262,10 @@ class MainWindow(
         refine_cell_action.triggered.connect(
             self.match_and_refine_cell_for_selected
         )
+        cif_simulator_action = QAction("Open simulated PXRD from CIF", self)
+        cif_simulator_action.triggered.connect(
+            lambda: self.tabs.setCurrentWidget(self.cif_simulation_widget)
+        )
         identify_phases_action = QAction("Identify phases from local library", self)
         identify_phases_action.triggered.connect(
             self.identify_phases_for_selected
@@ -291,6 +295,13 @@ class MainWindow(
         )
         rietveld_action.triggered.connect(
             lambda: self.tabs.setCurrentWidget(self.rietveld_widget)
+        )
+        exclusion_study_action = QAction(
+            "Open phase-exclusion investigation windows",
+            self,
+        )
+        exclusion_study_action.triggered.connect(
+            lambda: self.tabs.setCurrentWidget(self.exclusion_refinement_widget)
         )
         doping_series_action = QAction(
             "Open Doping-Series Comparison",
@@ -360,13 +371,14 @@ class MainWindow(
         )
         phase_menu = analysis_menu.addMenu("Phase & Structure")
         phase_menu.addActions(
-            [identify_phases_action, import_cif_action, refine_cell_action, phase_revolution_action, cif_library_action, structure_solution_action]
+            [identify_phases_action, import_cif_action, refine_cell_action, cif_simulator_action, phase_revolution_action, cif_library_action, structure_solution_action]
         )
         refinement_menu = analysis_menu.addMenu("Refinement & Quantification")
         refinement_menu.addActions(
             [
                 whole_pattern_action,
                 rietveld_action,
+                exclusion_study_action,
                 doping_series_action,
                 multicomponent_refiner_action,
                 quantify_phases_action,
@@ -427,6 +439,8 @@ class MainWindow(
                 "instrument",
                 "pawley_lebail",
                 "rietveld",
+                "exclusion_study",
+                "cif_simulator",
                 "doping_series",
                 "unknown_phase",
                 "multicomponent_refiner",
@@ -933,6 +947,10 @@ class MainWindow(
             self.whole_pattern_widget.apply_theme(theme_name)
         if hasattr(self, "rietveld_widget"):
             self.rietveld_widget.apply_theme(theme_name)
+        if hasattr(self, "exclusion_refinement_widget"):
+            self.exclusion_refinement_widget.apply_theme(theme_name)
+        if hasattr(self, "cif_simulation_widget"):
+            self.cif_simulation_widget.apply_theme(theme_name)
         if hasattr(self, "doping_series_widget"):
             self.doping_series_widget.apply_theme(theme_name)
         if hasattr(self, "validated_qpa_widget"):

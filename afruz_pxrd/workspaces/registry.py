@@ -20,7 +20,9 @@ def _builtin_specs() -> dict[str, WorkspaceWidgetSpec]:
     """Import established widgets only when the registry first needs them."""
     from ..batch_widget import BatchWorkflowWidget
     from ..cif_library_widget import CifLibraryManagerWidget
+    from ..cif_simulation_widget import CifSimulationWidget
     from ..doping_series_widget import DopingSeriesWidget
+    from ..exclusion_refinement_widget import ExclusionRefinementHubWidget
     from ..gui_workbench_widget import FullGuiWorkbenchWidget
     from ..instrument_calibration_widget import InstrumentCalibrationWidget
     from ..multicomponent_refiner_widget import MultiComponentRefinerWidget
@@ -35,12 +37,14 @@ def _builtin_specs() -> dict[str, WorkspaceWidgetSpec]:
         WorkspaceWidgetSpec("instrument", "calibration_widget", "Instrument Calibration", InstrumentCalibrationWidget),
         WorkspaceWidgetSpec("pawley_lebail", "whole_pattern_widget", "Pawley / Le Bail", WholePatternRefinementWidget),
         WorkspaceWidgetSpec("rietveld", "rietveld_widget", "Rietveld", RietveldRefinementWidget),
+        WorkspaceWidgetSpec("exclusion_study", "exclusion_refinement_widget", "Phase-Exclusion Study", ExclusionRefinementHubWidget),
         WorkspaceWidgetSpec("doping_series", "doping_series_widget", "Doping Series", DopingSeriesWidget),
         WorkspaceWidgetSpec("multicomponent_refiner", "multicomponent_refiner_widget", "Intelligent Multiphase", MultiComponentRefinerWidget),
         WorkspaceWidgetSpec("validated_qpa", "validated_qpa_widget", "Validated QPA", ValidatedQPAWidget),
         WorkspaceWidgetSpec("validation", "validation_widget", "Validation & Evidence", ValidationCampaignWidget),
         WorkspaceWidgetSpec("unknown_phase", "phase_revolution_widget", "Unknown Phase", PhaseRevolutionWidget),
         WorkspaceWidgetSpec("cif_library", "cif_library_widget", "CIF Library / Structure Match", CifLibraryManagerWidget),
+        WorkspaceWidgetSpec("cif_simulator", "cif_simulation_widget", "Simulated PXRD from CIF", CifSimulationWidget),
         WorkspaceWidgetSpec("solve_structure", "structure_solution_widget", "Solve Structure", StructureSolutionPathwayWidget),
         WorkspaceWidgetSpec("batch_reports", "batch_widget", "Batch & Reports", BatchWorkflowWidget),
         WorkspaceWidgetSpec("full_gui", "full_gui_workbench_widget", "Full GUI Workbench", FullGuiWorkbenchWidget),

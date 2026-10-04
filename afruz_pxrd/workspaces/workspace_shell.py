@@ -404,6 +404,14 @@ class WorkspaceShellMixin:
         crystal_layout.addWidget(self.crystal_results_tabs)
         self.tabs.addTab(self.crystal_tab, "CIF & Cell")
 
+        self.cif_simulation_widget = self.workspace_registry.create_builtin_widget(
+            "cif_simulator", self
+        )
+        self.tabs.addTab(
+            self.cif_simulation_widget,
+            "Simulated PXRD from CIF",
+        )
+
         self.phase_tab = QWidget()
         phase_layout = QVBoxLayout(self.phase_tab)
 
@@ -685,6 +693,14 @@ class WorkspaceShellMixin:
         self.tabs.addTab(
             self.rietveld_widget,
             "Rietveld",
+        )
+
+        self.exclusion_refinement_widget = self.workspace_registry.create_builtin_widget(
+            "exclusion_study", self
+        )
+        self.tabs.addTab(
+            self.exclusion_refinement_widget,
+            "Phase-Exclusion Study",
         )
 
         self.doping_series_widget = self.workspace_registry.create_builtin_widget(

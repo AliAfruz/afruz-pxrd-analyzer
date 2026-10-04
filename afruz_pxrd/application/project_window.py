@@ -376,6 +376,10 @@ class ProjectWindowMixin:
             self.whole_pattern_widget.set_state({})
         if hasattr(self, "rietveld_widget"):
             self.rietveld_widget.set_state({})
+        if hasattr(self, "exclusion_refinement_widget"):
+            self.exclusion_refinement_widget.set_state({})
+        if hasattr(self, "cif_simulation_widget"):
+            self.cif_simulation_widget.set_state({})
         if hasattr(self, "doping_series_widget"):
             self.doping_series_widget.set_state({})
         if hasattr(self, "validated_qpa_widget"):
@@ -624,6 +628,16 @@ class ProjectWindowMixin:
             "rietveld_refinement": (
                 self.rietveld_widget.get_state()
                 if hasattr(self, "rietveld_widget")
+                else {}
+            ),
+            "exclusion_refinement_investigation": (
+                self.exclusion_refinement_widget.get_state()
+                if hasattr(self, "exclusion_refinement_widget")
+                else {}
+            ),
+            "cif_simulation": (
+                self.cif_simulation_widget.get_state()
+                if hasattr(self, "cif_simulation_widget")
                 else {}
             ),
             "doping_series": (
@@ -1153,6 +1167,14 @@ class ProjectWindowMixin:
         if hasattr(self, "rietveld_widget"):
             self.rietveld_widget.set_state(
                 state.get("rietveld_refinement", {})
+            )
+        if hasattr(self, "exclusion_refinement_widget"):
+            self.exclusion_refinement_widget.set_state(
+                state.get("exclusion_refinement_investigation", {})
+            )
+        if hasattr(self, "cif_simulation_widget"):
+            self.cif_simulation_widget.set_state(
+                state.get("cif_simulation", {})
             )
         if hasattr(self, "doping_series_widget"):
             self.doping_series_widget.set_state(

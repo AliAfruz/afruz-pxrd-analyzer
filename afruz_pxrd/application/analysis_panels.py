@@ -70,6 +70,11 @@ class AnalysisPanelMixin:
                 "Match observed reflections and refine lattice parameters against the active CIF.",
                 "Phase",
             ),
+            "cif_simulator": AnalysisPanelDescriptor(
+                "Simulated PXRD from CIF",
+                "Calculate reflection sticks and a display-only broadened profile in the central CIF simulator.",
+                "Phase",
+            ),
             "cif_library": AnalysisPanelDescriptor(
                 "CIF library search",
                 "Search and inspect structure matches in the central scientific workspace.",
@@ -93,6 +98,11 @@ class AnalysisPanelMixin:
             "rietveld": AnalysisPanelDescriptor(
                 "Rietveld refinement",
                 "Refine the structural model and inspect fit statistics, difference, and Bragg marks.",
+                "Refine",
+            ),
+            "exclusion_study": AnalysisPanelDescriptor(
+                "Phase-exclusion investigation",
+                "Launch isolated Pawley, Le Bail, or Rietveld windows with auditable excluded peak regions.",
                 "Refine",
             ),
             "doping_series": AnalysisPanelDescriptor(
@@ -149,6 +159,7 @@ class AnalysisPanelMixin:
             "residual_stress": ("residual_stress", "export"),
             "phase_identification": ("phase_identification", "export"),
             "cif_cell": ("cif_cell", "export"),
+            "cif_simulator": ("export",),
             "qpa_preview": ("qpa_preview", "export"),
             "instrument": ("export",),
             "cif_library": ("export",),
@@ -156,6 +167,7 @@ class AnalysisPanelMixin:
             "solve_structure": ("export",),
             "pawley_lebail": ("export",),
             "rietveld": ("export",),
+            "exclusion_study": ("export",),
             "doping_series": ("export",),
             "multicomponent_refiner": ("export",),
             "validated_qpa": ("export",),
@@ -190,11 +202,13 @@ class AnalysisPanelMixin:
             "residual_stress": "Calculate stress",
             "phase_identification": "Identify phases",
             "cif_cell": "Refine unit cell",
+            "cif_simulator": "Simulate CIF PXRD",
             "cif_library": "Search CIF library",
             "unknown_phase": "Run indexing",
             "solve_structure": "Test robustness",
             "pawley_lebail": "Run Pawley / Le Bail",
             "rietveld": "Run Rietveld",
+            "exclusion_study": "Open investigation windows",
             "doping_series": "Compare doping series",
             "multicomponent_refiner": "Run multiphase search",
             "qpa_preview": "Calculate QPA preview",

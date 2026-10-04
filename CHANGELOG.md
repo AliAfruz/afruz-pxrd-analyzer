@@ -3,6 +3,29 @@
 All notable user-visible changes are recorded here. Versions follow semantic
 versioning where practical.
 
+## [23.1.0] — 2026-10-04 (local development)
+
+### Added
+
+- A large central **Simulated PXRD from CIF** workspace with reflection sticks,
+  a display-only broadened pseudo-Voigt preview, GPU-aware calculation, a
+  reflection table, and clean TXT export.
+- A separate **Phase-Exclusion Investigation** workspace that launches
+  independent Pawley, Le Bail, and Rietveld windows without replacing the
+  established production refinement tabs.
+- Plot-selected interval exclusion and peak-center/half-width exclusion,
+  merged-interval auditing, included/excluded point counts, shaded plot bands,
+  persistence, and dedicated clean export.
+
+### Scientific boundary
+
+- Excluded points do not contribute to parameter estimation or fit statistics.
+  Exclusion can test an impurity or model-deficiency hypothesis, but cannot by
+  itself identify, prove, or quantify an impurity phase.
+- Full-range and exclusion-aware results must be reported together with every
+  excluded interval and its scientific rationale.
+- This local update has not been pushed to GitHub or released on Zenodo.
+
 ## [23.0.0] — 2026-10-03
 
 ### Added

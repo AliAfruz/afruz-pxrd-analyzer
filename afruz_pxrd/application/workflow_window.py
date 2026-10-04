@@ -17,11 +17,13 @@ class WorkflowWindowMixin:
             "residual_stress": self.stress_tab,
             "phase_identification": self.phase_tab,
             "cif_cell": self.crystal_tab,
+            "cif_simulator": self.cif_simulation_widget,
             "unknown_phase": self.phase_revolution_widget,
             "cif_library": self.cif_library_widget,
             "solve_structure": self.structure_solution_widget,
             "pawley_lebail": self.whole_pattern_widget,
             "rietveld": self.rietveld_widget,
+            "exclusion_study": self.exclusion_refinement_widget,
             "doping_series": self.doping_series_widget,
             "multicomponent_refiner": self.multicomponent_refiner_widget,
             "qpa_preview": self.qpa_tab,
@@ -439,11 +441,13 @@ class WorkflowWindowMixin:
             "residual_stress": "Calculate stress",
             "phase_identification": "Identify phases",
             "cif_cell": "Refine unit cell",
+            "cif_simulator": "Simulate CIF PXRD",
             "cif_library": "Search CIF library",
             "unknown_phase": "Run indexing",
             "solve_structure": "Test robustness",
             "pawley_lebail": "Run Pawley / Le Bail",
             "rietveld": "Run Rietveld",
+            "exclusion_study": "Open investigation windows",
             "multicomponent_refiner": "Run multiphase search",
             "qpa_preview": "Calculate QPA preview",
             "validated_qpa": "Calculate validated QPA",
@@ -453,7 +457,9 @@ class WorkflowWindowMixin:
             "advanced": "Open advanced tools",
         }
         task_state = self.workflow_task_states.get(self.active_workflow_task)
-        requires_dataset = self.active_workflow_task not in {"project_home", "full_gui", "advanced"}
+        requires_dataset = self.active_workflow_task not in {
+            "project_home", "cif_simulator", "full_gui", "advanced"
+        }
         enabled = dataset is not None or not requires_dataset
         tooltip = TASK_BY_KEY.get(self.active_workflow_task).guidance if self.active_workflow_task in TASK_BY_KEY else "Run the current analysis."
         if task_state is not None:
@@ -485,6 +491,7 @@ class WorkflowWindowMixin:
             "residual_stress": self.calculate_residual_stress,
             "phase_identification": self.identify_phases_for_selected,
             "cif_cell": self.match_and_refine_cell_for_selected,
+            "cif_simulator": self.cif_simulation_widget.calculate,
             "cif_library": lambda: self._click_workspace_button(
                 self.cif_library_widget, "match_button"
             ),
@@ -500,6 +507,7 @@ class WorkflowWindowMixin:
             "rietveld": lambda: self._click_workspace_button(
                 self.rietveld_widget, "run_button"
             ),
+            "exclusion_study": lambda: self.exclusion_refinement_widget.open_window("pawley"),
             "multicomponent_refiner": lambda: self._click_workspace_button(
                 self.multicomponent_refiner_widget, "run_button"
             ),
@@ -530,6 +538,7 @@ class WorkflowWindowMixin:
             "residual_stress": self.populate_residual_stress_results,
             "phase_identification": self.populate_phase_identification_results,
             "cif_cell": self.populate_crystal_results,
+            "cif_simulator": self.cif_simulation_widget.refresh_for_selected_dataset,
             "qpa_preview": self.populate_qpa_results,
             "instrument": self.calibration_widget.refresh_references,
             "pawley_lebail": lambda: self._call_workspace_methods(
@@ -542,6 +551,7 @@ class WorkflowWindowMixin:
                 "refresh_active_cif",
                 "refresh_for_selected_dataset",
             ),
+            "exclusion_study": self.exclusion_refinement_widget.refresh_for_selected_dataset,
             "validated_qpa": self.validated_qpa_widget.refresh_from_rietveld,
             "full_gui": self.full_gui_workbench_widget.refresh_status,
             "batch_reports": lambda: self._call_workspace_methods(
