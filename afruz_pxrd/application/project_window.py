@@ -304,6 +304,14 @@ class ProjectWindowMixin:
             if thread is not None:
                 thread.quit()
                 thread.wait(3000)
+        exclusion_hub = getattr(self, "exclusion_refinement_widget", None)
+        sequential_workspace = getattr(exclusion_hub, "sequential_workspace", None)
+        if sequential_workspace is not None and sequential_workspace.is_running():
+            sequential_workspace.cancel_current_run()
+            thread = sequential_workspace._thread
+            if thread is not None:
+                thread.quit()
+                thread.wait(3000)
         if (
             hasattr(self, "doping_series_widget")
             and self.doping_series_widget.is_running()

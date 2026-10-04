@@ -14,6 +14,14 @@ def test_main_window_constructs_and_closes_without_worker_api_crash(qtbot):
 
     assert window.windowTitle()
     assert window.isVisible()
+    sequential = window.exclusion_refinement_widget.sequential_workspace
+    assert sequential.plot is not None
+    assert sequential.pawley_button.text().startswith("1")
+    assert sequential.lebail_button.text().startswith("2")
+    assert sequential.rietveld_button.text().startswith("3")
+    saved = window._analysis_state()["exclusion_refinement_investigation"]
+    assert "sequential_workspace" in saved
+    assert saved["sequential_workspace"]["schema_version"] == 1
     from afruz_pxrd.crystal_studio import CrystalStudioDialog
     assert window.rietveld_widget.crystal_studio_button.isEnabled()
     window.rietveld_widget.crystal_studio_button.click()

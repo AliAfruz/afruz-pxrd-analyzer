@@ -3,6 +3,32 @@
 All notable user-visible changes are recorded here. Versions follow semantic
 versioning where practical.
 
+## [23.2.0] — 2026-10-04 (local development)
+
+### Added
+
+- A large central **Sequential Multiphase Refinement and Exclusion Laboratory**
+  with Pawley, Le Bail and Rietveld run buttons.
+- Multi-CIF import and one explicit active CIF snapshot per refinement.
+- Unlimited project-unique refinement IDs, parent/child lineage, frozen result
+  history, user labels and continue-from-selected controls.
+- Plot-click/drag next-run exclusions with reflection-domain activity auditing,
+  GPU-aware native engine execution and complete multi-run ZIP export.
+- AFZ persistence for CIF models, completed/failed/cancelled run records,
+  settings, exclusions, history selection and next-run counter.
+
+### Scientific boundary
+
+- A masked region is removed from the observed/calculated fit domain for that
+  run. Matching CIF reflection centers are marked inactive for audit and plot
+  ticks, but crystallographic structure factors are not deleted.
+- A better masked fit can guide a phase-impurity investigation but cannot prove
+  phase identity, purity or quantitative abundance without an explicit model
+  and independent evidence.
+- The established production refiners and the three 23.1 separate
+  investigation windows remain available and unchanged.
+- This local update has not been pushed to GitHub or released on Zenodo.
+
 ## [23.1.0] — 2026-10-04 (local development)
 
 ### Added

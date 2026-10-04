@@ -37,6 +37,7 @@ from .exclusion_regions import (
 from .models import Dataset
 from .refinement_export import export_refinement_txt_bundle
 from .rietveld_widget import RietveldRefinementWidget
+from .sequential_refinement_workspace import SequentialRefinementWorkspace
 from .text_export import write_table_txt
 from .whole_pattern_widget import WholePatternRefinementWidget
 from .widgets import NoWheelDoubleSpinBox
@@ -651,7 +652,7 @@ class ExclusionRefinementDialog(QDialog):
 
 
 class ExclusionRefinementHubWidget(QWidget):
-    """Launch three isolated, exclusion-aware investigation refinements."""
+    """Central sequential lab plus the three original isolated investigations."""
 
     METHODS = {
         "pawley": "Pawley decomposition",
@@ -669,62 +670,32 @@ class ExclusionRefinementHubWidget(QWidget):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
-        heading = QLabel("Phase-Exclusion Investigation Workspace")
+        layout.setContentsMargins(6, 6, 6, 6)
+        heading = QLabel("Sequential Multiphase Refinement and Exclusion Laboratory")
         heading.setObjectName("sectionTitle")
         layout.addWidget(heading)
         description = QLabel(
-            "Open an independent Pawley, Le Bail, or Rietveld window and mark peaks or 2theta intervals "
-            "that must not influence the objective function. The production refinement tabs, raw data, "
-            "processed data, CIFs, and accepted scientific state are not modified. Use paired full-range and "
-            "exclusion-aware fits to investigate suspected impurity peaks or model deficiency."
+            "Run an unlimited lineage of Pawley, Le Bail and structure-constrained Rietveld refinements from "
+            "one central profile. Import several CIF models, select one model for each run, label peaks or "
+            "2theta intervals for the next run, and return to any frozen result by its unique refinement ID. "
+            "The established production refinement tabs remain unchanged."
         )
         description.setWordWrap(True)
         description.setObjectName("mutedLabel")
         install_label_copy_menu(description)
         layout.addWidget(description)
 
-        button_row = QHBoxLayout()
+        self.sequential_workspace = SequentialRefinementWorkspace(self.main_window, self)
+        layout.addWidget(self.sequential_workspace, 1)
+
+        legacy = QGroupBox("Original separate investigation windows (preserved)")
+        button_row = QHBoxLayout(legacy)
         self.pawley_button = QPushButton("Open Pawley investigation window")
         self.lebail_button = QPushButton("Open Le Bail investigation window")
         self.rietveld_button = QPushButton("Open Rietveld investigation window")
         for button in (self.pawley_button, self.lebail_button, self.rietveld_button):
-            button.setMinimumHeight(54)
-            button.setObjectName("primaryButton")
             button_row.addWidget(button)
-        layout.addLayout(button_row)
-
-        table = QTableWidget(3, 4)
-        table.setHorizontalHeaderLabels(
-            ["Investigation", "Required structural input", "Excluded-point treatment", "Interpretive boundary"]
-        )
-        rows = (
-            (
-                "Pawley",
-                "Indexed cell / reference reflections",
-                "Independent reflection intensities fitted only to included points",
-                "Tests lattice compatibility; not an atomic-structure proof",
-            ),
-            (
-                "Le Bail",
-                "Indexed cell / reference reflections",
-                "Intensity repartition and profile fit use only included points",
-                "Extracted intensities can be correlated in overlap groups",
-            ),
-            (
-                "Rietveld",
-                "Validated atomic CIF model",
-                "Scale, cell, profile, background and selected structural terms use only included points",
-                "Excluded residuals cannot support phase identification or quantification",
-            ),
-        )
-        for row_index, values in enumerate(rows):
-            for column, value in enumerate(values):
-                table.setItem(row_index, column, QTableWidgetItem(value))
-        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        table.verticalHeader().setVisible(False)
-        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        install_table_copy_menu(table)
-        layout.addWidget(table)
+        layout.addWidget(legacy)
 
         warning = QLabel(
             "Scientific reporting rule: publish the full-range fit together with every excluded interval and its "
@@ -735,7 +706,6 @@ class ExclusionRefinementHubWidget(QWidget):
         warning.setStyleSheet("color: #e7b84b; font-weight: 600;")
         install_label_copy_menu(warning)
         layout.addWidget(warning)
-        layout.addStretch(1)
 
         self.pawley_button.clicked.connect(lambda: self.open_window("pawley"))
         self.lebail_button.clicked.connect(lambda: self.open_window("lebail"))
@@ -786,17 +756,19 @@ class ExclusionRefinementHubWidget(QWidget):
         self._dialogs.pop(key, None)
 
     def refresh_for_selected_dataset(self):
+        self.sequential_workspace.refresh_for_selected_dataset()
         for widget in self._widgets.values():
             widget.refresh_for_selected_dataset()
 
     def run_analysis(self):
-        self.open_window("pawley")
+        self.sequential_workspace.refresh_for_selected_dataset()
 
     def validate_inputs(self):
         dataset = self.main_window.selected_dataset()
         return (dataset is not None, "Select an experimental dataset first." if dataset is None else "")
 
     def apply_theme(self, theme_name):
+        self.sequential_workspace.apply_theme(theme_name)
         for widget in self._widgets.values():
             widget.apply_theme(theme_name)
 
@@ -804,11 +776,19 @@ class ExclusionRefinementHubWidget(QWidget):
         state = deepcopy(self._pending_state)
         for key, widget in self._widgets.items():
             state[key] = widget.get_state()
-        return {"methods": state}
+        return {
+            "methods": state,
+            "sequential_workspace": self.sequential_workspace.get_state(),
+        }
 
     def set_state(self, state):
         methods = (state or {}).get("methods") if isinstance(state, dict) else None
         self._pending_state = deepcopy(methods) if isinstance(methods, dict) else {}
+        self.sequential_workspace.set_state(
+            (state or {}).get("sequential_workspace", {})
+            if isinstance(state, dict)
+            else {}
+        )
         for key, widget in self._widgets.items():
             if key in self._pending_state:
                 widget.set_state(self._pending_state[key])

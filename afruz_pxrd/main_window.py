@@ -297,7 +297,7 @@ class MainWindow(
             lambda: self.tabs.setCurrentWidget(self.rietveld_widget)
         )
         exclusion_study_action = QAction(
-            "Open phase-exclusion investigation windows",
+            "Open sequential refinement & exclusion laboratory",
             self,
         )
         exclusion_study_action.triggered.connect(

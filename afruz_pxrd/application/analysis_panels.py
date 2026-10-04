@@ -101,8 +101,8 @@ class AnalysisPanelMixin:
                 "Refine",
             ),
             "exclusion_study": AnalysisPanelDescriptor(
-                "Phase-exclusion investigation",
-                "Launch isolated Pawley, Le Bail, or Rietveld windows with auditable excluded peak regions.",
+                "Sequential refinement & exclusions",
+                "Use the central multi-CIF Pawley/Le Bail/Rietveld history lab or launch the preserved isolated investigation windows.",
                 "Refine",
             ),
             "doping_series": AnalysisPanelDescriptor(
@@ -208,7 +208,7 @@ class AnalysisPanelMixin:
             "solve_structure": "Test robustness",
             "pawley_lebail": "Run Pawley / Le Bail",
             "rietveld": "Run Rietveld",
-            "exclusion_study": "Open investigation windows",
+            "exclusion_study": "Run central Rietveld",
             "doping_series": "Compare doping series",
             "multicomponent_refiner": "Run multiphase search",
             "qpa_preview": "Calculate QPA preview",

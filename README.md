@@ -1,4 +1,4 @@
-# Afruz PXRD Analyzer 23.1.0
+# Afruz PXRD Analyzer 23.2.0
 
 [![Windows tests](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml/badge.svg)](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23119992.svg)](https://doi.org/10.5281/zenodo.23119992)
@@ -24,10 +24,14 @@ Release 23.0.0 is archived under the version DOI
 concept DOI is [10.5281/zenodo.23119992](https://doi.org/10.5281/zenodo.23119992).
 Follow [`PUBLISHING_GUIDE.md`](PUBLISHING_GUIDE.md) for future releases.
 
-Local development release 23.1.0 adds a central CIF-to-PXRD simulation canvas
-and three isolated phase-exclusion investigation windows for Pawley, Le Bail,
-and Rietveld fits. The public GitHub/Zenodo release remains unchanged until a
-later reviewed release is explicitly published. See
+Local development release 23.2.0 adds a central, lineage-aware sequential
+refinement laboratory alongside the CIF-to-PXRD simulation canvas and the three
+isolated phase-exclusion investigation windows. The laboratory supports a
+multi-CIF library with one auditable active model per run, unlimited uniquely
+identified Pawley/Le Bail/Rietveld runs, labelled next-run fit-domain masks,
+GPU-aware execution, frozen history plots, complete ZIP export, and AFZ project
+resume. The public GitHub/Zenodo release remains unchanged until a later
+reviewed release is explicitly published. See
 [`PHASE_EXCLUSION_INVESTIGATION.md`](PHASE_EXCLUSION_INVESTIGATION.md).
 The complete release verification is recorded in
 [`RELEASE_AUDIT.md`](RELEASE_AUDIT.md), and fixture licensing/provenance is

@@ -1,12 +1,14 @@
 # Phase-Exclusion Investigation and CIF PXRD Simulation
 
-Release: 23.1.0 local development build
+Release: 23.2.0 local development build
 
 ## Purpose
 
 The Phase-Exclusion Investigation workspace is an additive scientific tool. It
 does not replace or modify the established Pawley/Le Bail and Rietveld
-workspaces. It opens three independent windows:
+workspaces. Its main view is now the **Sequential Multiphase Refinement and
+Exclusion Laboratory**, while the three independent 23.1 windows remain
+available:
 
 1. Exclusion-aware Pawley refinement.
 2. Exclusion-aware Le Bail extraction.
@@ -16,6 +18,43 @@ Each window uses the same validated calculation engine and parameter controls
 as its production counterpart. Before the engine receives the data, a copied
 dataset is filtered using the explicitly listed closed 2theta intervals. Raw
 and processed arrays in the project remain unchanged.
+
+## Central sequential-refinement laboratory
+
+Open **Refinement & Quantification -> Phase-exclusion investigation**. The
+large central plot always shows either the selected experimental pattern or a
+frozen historical refinement. Add any number of CIF files to the library and
+select one active CIF for the next run. The three main buttons start Pawley,
+Le Bail or Rietveld refinement directly from that CIF. Raw measured intensity
+is the default input; processed intensity must be selected deliberately.
+
+Every attempted refinement receives an immutable human-readable identifier,
+for example `AFR-RT-00003`, plus a parent ID when it continues a selected run.
+The history at the right records method, active CIF, status, Rwp, user label,
+settings, timestamps, exclusions, GPU provenance and the complete numerical
+result. Selecting a history row restores its frozen observed/calculated/
+difference profile. **Continue from selected run** restores that run's CIF,
+settings and exclusion set as the starting point for a new child run; the old
+record is never overwritten.
+
+To prepare the next refinement, drag the amber selector or left-click the plot
+to center it, provide a scientific label, and add a region or peak-width
+exclusion. The next run omits both measured and calculated profile points in
+those closed intervals from its objective and fit-domain statistics. CIF
+reflection centers inside a mask are marked `fit_active = false`, hidden from
+that run's active Bragg ticks, and exported with the label. The hkl structure
+factors are not deleted: deleting selected crystallographic reflections from a
+Rietveld structure model would be physically invalid and could suppress real
+profile tails outside the interval.
+
+**Full history export** creates one ZIP containing the lineage table, workspace
+manifest, a clean full refinement TXT bundle for every completed ID, applied
+exclusion tables, provenance, reflection activity and available source CIFs.
+AFZ project saving stores the CIF library, run counter, complete history,
+draft exclusions, selected history item and controls. Reopening the AFZ lets a
+new child refinement continue from any completed record. A numerical optimizer
+that was interrupted while running is recorded as interrupted and is restarted
+as a new ID; its in-memory iteration cannot be resumed safely.
 
 ## Using excluded regions
 

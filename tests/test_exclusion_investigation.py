@@ -15,7 +15,14 @@ from afruz_pxrd.exclusion_regions import (
 from afruz_pxrd.workflow import TASK_BY_KEY
 from afruz_pxrd.phase_identification import reference_from_cif_pattern
 from afruz_pxrd.rietveld_refinement import RietveldPhaseSpec, refine_rietveld
+from afruz_pxrd.sequential_refinement_workspace import (
+    SequentialRefinementWorker,
+    SequentialRefinementWorkspace,
+    annotate_reflection_activity,
+    refinement_run_id,
+)
 from afruz_pxrd.whole_pattern_refinement import WholePatternPhaseSpec, refine_whole_pattern
+from afruz_pxrd.models import Dataset
 
 
 def test_exclusion_regions_are_sorted_merged_and_closed():
@@ -198,3 +205,141 @@ def test_filtered_pattern_runs_in_rietveld(nacl_raw_frame, nacl_structure):
     audited = attach_exclusion_audit(result, audit, method="Rietveld")
     assert audited["success"]
     assert audited["excluded_data_point_count"] > 0
+
+
+def test_sequential_run_ids_and_reflection_activity_are_auditable():
+    assert refinement_run_id(17, "pawley") == "AFR-PW-00017"
+    assert refinement_run_id(18, "lebail") == "AFR-LB-00018"
+    assert refinement_run_id(19, "rietveld") == "AFR-RT-00019"
+    rows, audit = annotate_reflection_activity(
+        [
+            {"two_theta_deg": 12.0, "hkl_label": "(1 0 0)"},
+            {"two_theta_deg": 20.0, "hkl_label": "(1 1 0)"},
+        ],
+        [{"start_deg": 19.8, "end_deg": 20.2, "label": "suspected impurity"}],
+    )
+    assert rows[0]["fit_active"] is True
+    assert rows[1]["fit_active"] is False
+    assert rows[1]["exclusion_label"] == "suspected impurity"
+    assert audit["fit_active_reflection_count"] == 1
+    assert audit["fit_inactive_reflection_count"] == 1
+    assert "not physically deleted" in audit["rule"]
+
+
+@pytest.mark.parametrize("method", ["pawley", "lebail", "rietveld"])
+def test_sequential_worker_runs_each_native_method(
+    method, nacl_raw_frame, nacl_structure
+):
+    x = nacl_raw_frame["two_theta_deg"].to_numpy(dtype=float)
+    y = nacl_raw_frame["intensity_counts"].to_numpy(dtype=float)
+    settings = {
+        "wavelength_angstrom": 1.5406,
+        "two_theta_min": float(x[0]),
+        "two_theta_max": float(x[-1]),
+        "intensity_cutoff_percent": 0.5,
+        "background_order": 2,
+        "weighting": "Poisson-like",
+        "refine_zero_shift": False,
+        "initial_zero_shift": 0.0,
+        "refine_profile": False,
+        "initial_u": 0.005,
+        "initial_v": 0.0,
+        "initial_w": 0.02,
+        "initial_eta": 0.5,
+        "cell_tolerance_percent": 1.0,
+        "maximum_evaluations": 5,
+        "optimization_points": 300,
+        "extraction_cycles": 2,
+        "use_staged_refinement": False,
+        "refine_cell": False,
+        "freeze_structure_factors": True,
+        "validation_stride": 0,
+        "use_gpu": False,
+        "use_processed": False,
+    }
+    worker = SequentialRefinementWorker(
+        method,
+        x,
+        y,
+        nacl_structure,
+        settings,
+        [(30.0, 32.0, "next-run impurity test")],
+    )
+    completed = []
+    failed = []
+    worker.finished.connect(completed.append)
+    worker.failed.connect(failed.append)
+    worker.run()
+    assert not failed
+    assert len(completed) == 1
+    result = completed[0]
+    assert result["success"]
+    assert result["excluded_data_point_count"] > 0
+    assert result["sequential_refinement"]["method_key"] == method
+    assert "cif_reflection_fit_domain" in result
+    observed_x = np.asarray(result["observed_x"], dtype=float)
+    assert not np.any((observed_x >= 30.0) & (observed_x <= 32.0))
+
+
+@pytest.mark.gui
+def test_sequential_workspace_round_trips_cifs_history_and_drafts(
+    qtbot, nacl_structure
+):
+    x = np.linspace(5.0, 80.0, 301)
+    dataset = Dataset(
+        uid="sequence-dataset",
+        name="Sequential demo",
+        x=x,
+        y_raw=np.sin(x) + 5.0,
+        y_processed=None,
+        source_path="demo.xy",
+    )
+
+    class Window:
+        reference_structure = None
+
+        def __init__(self):
+            self.dirty_count = 0
+
+        def selected_dataset(self):
+            return dataset
+
+        def _mark_project_dirty(self):
+            self.dirty_count += 1
+
+    owner = Window()
+    widget = SequentialRefinementWorkspace(owner)
+    qtbot.addWidget(widget)
+    cif_uid = widget._add_structure(nacl_structure, "NaCl_validation_P1.cif")
+    widget.exclusion_editor.set_regions([(30.0, 31.0, "labelled phase test")])
+    widget.range_min.setValue(10.0)
+    widget.range_max.setValue(65.0)
+    widget.history_by_uid[dataset.uid] = [
+        {
+            "run_id": "AFR-RT-00001",
+            "method_key": "rietveld",
+            "method": "Rietveld refinement",
+            "status": "Completed",
+            "dataset_uid": dataset.uid,
+            "cif_uid": cif_uid,
+            "cif_name": "NaCl",
+            "settings": widget._settings(),
+            "excluded_regions": [
+                {"start_deg": 30.0, "end_deg": 31.0, "width_deg": 1.0, "label": "labelled phase test"}
+            ],
+            "result": {"rwp_percent": 5.0, "reflections": []},
+        }
+    ]
+    widget.next_run_counter = 2
+    state = widget.get_state()
+
+    restored = SequentialRefinementWorkspace(owner)
+    qtbot.addWidget(restored)
+    restored.set_state(state)
+    assert len(restored.structures) == 1
+    assert restored._active_structure_uid() == cif_uid
+    assert restored.next_run_counter == 2
+    assert restored.range_min.value() == pytest.approx(10.0)
+    assert restored.range_max.value() == pytest.approx(65.0)
+    assert restored.history_by_uid[dataset.uid][0]["run_id"] == "AFR-RT-00001"
+    assert restored.exclusion_editor.regions()[0].label == "labelled phase test"

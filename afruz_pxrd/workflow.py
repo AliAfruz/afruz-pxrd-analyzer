@@ -102,7 +102,7 @@ TASKS: tuple[WorkflowTask, ...] = (
     WorkflowTask("solve_structure", "Solve structure", "phase_structure", True, "Prepare and validate an atomic model before Rietveld refinement."),
     WorkflowTask("pawley_lebail", "Pawley / Le Bail", "refinement_qpa", True, "Verify candidate cells without requiring an atomic structure."),
     WorkflowTask("rietveld", "Rietveld refinement", "refinement_qpa", True, "Refine only validated atomic models and review parameter correlations."),
-    WorkflowTask("exclusion_study", "Phase-exclusion investigation", "refinement_qpa", True, "Open separate Pawley, Le Bail, or Rietveld windows and audit deliberately excluded peaks or regions."),
+    WorkflowTask("exclusion_study", "Sequential refinement & exclusions", "refinement_qpa", True, "Run lineage-aware Pawley, Le Bail, or Rietveld refinements from a multi-CIF library and audit deliberately excluded peaks or regions."),
     WorkflowTask("doping_series", "Doping-series comparison", "refinement_qpa", True, "Compare an ordered compositional series and optionally refine each pattern independently or sequentially."),
     WorkflowTask("multicomponent_refiner", "Intelligent multiphase refiner", "refinement_qpa", True, "Test user-selected CIF combinations, reject unsupported phases and export a Phase 19 report bundle."),
     WorkflowTask("qpa_preview", "Quantitative analysis", "refinement_qpa", False, "Use exploratory peak-based quantification only with explicit limitations."),

@@ -447,7 +447,7 @@ class WorkflowWindowMixin:
             "solve_structure": "Test robustness",
             "pawley_lebail": "Run Pawley / Le Bail",
             "rietveld": "Run Rietveld",
-            "exclusion_study": "Open investigation windows",
+            "exclusion_study": "Run central Rietveld",
             "multicomponent_refiner": "Run multiphase search",
             "qpa_preview": "Calculate QPA preview",
             "validated_qpa": "Calculate validated QPA",
@@ -507,7 +507,7 @@ class WorkflowWindowMixin:
             "rietveld": lambda: self._click_workspace_button(
                 self.rietveld_widget, "run_button"
             ),
-            "exclusion_study": lambda: self.exclusion_refinement_widget.open_window("pawley"),
+            "exclusion_study": lambda: self.exclusion_refinement_widget.sequential_workspace.run_method("rietveld"),
             "multicomponent_refiner": lambda: self._click_workspace_button(
                 self.multicomponent_refiner_widget, "run_button"
             ),
