@@ -297,11 +297,11 @@ class MainWindow(
             lambda: self.tabs.setCurrentWidget(self.rietveld_widget)
         )
         exclusion_study_action = QAction(
-            "Open sequential refinement & exclusion laboratory",
+            "Open Step-wise Refinement Studio (separate window)",
             self,
         )
         exclusion_study_action.triggered.connect(
-            lambda: self.tabs.setCurrentWidget(self.exclusion_refinement_widget)
+            lambda: self.exclusion_refinement_widget.open_studio()
         )
         doping_series_action = QAction(
             "Open Doping-Series Comparison",

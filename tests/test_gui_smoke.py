@@ -22,6 +22,14 @@ def test_main_window_constructs_and_closes_without_worker_api_crash(qtbot):
     saved = window._analysis_state()["exclusion_refinement_investigation"]
     assert "sequential_workspace" in saved
     assert saved["sequential_workspace"]["schema_version"] == 2
+    window._select_workflow_task("exclusion_study")
+    assert window.workflow_header.run_button.text() == "Open Refinement Studio"
+    assert window.workflow_header.run_button.isEnabled()
+    window._run_current_workflow_action()
+    dialog = window.exclusion_refinement_widget.studio_dialog
+    assert dialog is not None and dialog.isVisible()
+    assert sequential.window() is dialog and not sequential.is_running()
+    dialog.close()
     from afruz_pxrd.crystal_studio import CrystalStudioDialog
     assert window.rietveld_widget.crystal_studio_button.isEnabled()
     window.rietveld_widget.crystal_studio_button.click()

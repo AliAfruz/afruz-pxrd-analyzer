@@ -1,4 +1,4 @@
-# Afruz PXRD Analyzer 23.3.0
+# Afruz PXRD Analyzer 23.3.1
 
 [![Windows tests](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml/badge.svg)](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23119992.svg)](https://doi.org/10.5281/zenodo.23119992)
@@ -43,6 +43,12 @@ This is separate candidate comparison, not a simultaneous multiphase fit or
 residual phase subtraction. The restored interface, established production
 refiners and Crystal Studio are retained. See
 [`STEPWISE_CIF_QUEUE.md`](STEPWISE_CIF_QUEUE.md) for the workflow.
+Local patch 23.3.1 moves that laboratory into a separate, resizable
+**Step-wise Refinement Studio**: a full-height central XRD canvas, compact
+scrolling controls on the left, result history on the right and always-visible
+queue actions. Open **Sequential refinement & exclusions → Open Refinement
+Studio**. It retains the same project-owned calculation/state objects and AFZ
+data; closing the Studio hides it without discarding jobs or results.
 The complete release verification is recorded in
 [`RELEASE_AUDIT.md`](RELEASE_AUDIT.md), and fixture licensing/provenance is
 tracked in [`DATA_PROVENANCE.md`](DATA_PROVENANCE.md).

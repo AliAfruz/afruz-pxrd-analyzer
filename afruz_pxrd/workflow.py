@@ -102,7 +102,7 @@ TASKS: tuple[WorkflowTask, ...] = (
     WorkflowTask("solve_structure", "Solve structure", "phase_structure", True, "Prepare and validate an atomic model before Rietveld refinement."),
     WorkflowTask("pawley_lebail", "Pawley / Le Bail", "refinement_qpa", True, "Verify candidate cells without requiring an atomic structure."),
     WorkflowTask("rietveld", "Rietveld refinement", "refinement_qpa", True, "Refine only validated atomic models and review parameter correlations."),
-    WorkflowTask("exclusion_study", "Sequential refinement & exclusions", "refinement_qpa", True, "Run lineage-aware Pawley, Le Bail, or Rietveld refinements from a multi-CIF library and audit deliberately excluded peaks or regions."),
+    WorkflowTask("exclusion_study", "Sequential refinement & exclusions", "refinement_qpa", True, "Open a separate Step-wise Refinement Studio with one-CIF candidate queues, exclusions and frozen result history."),
     WorkflowTask("doping_series", "Doping-series comparison", "refinement_qpa", True, "Compare an ordered compositional series and optionally refine each pattern independently or sequentially."),
     WorkflowTask("multicomponent_refiner", "Intelligent multiphase refiner", "refinement_qpa", True, "Test user-selected CIF combinations, reject unsupported phases and export a Phase 19 report bundle."),
     WorkflowTask("qpa_preview", "Quantitative analysis", "refinement_qpa", False, "Use exploratory peak-based quantification only with explicit limitations."),
@@ -155,7 +155,7 @@ TASK_STAGE_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     "solve_structure": ("phase",),
     "pawley_lebail": ("phase",),
     "rietveld": ("phase",),
-    "exclusion_study": ("phase",),
+    "exclusion_study": (),  # Opening the Studio is not starting a numerical fit.
     "doping_series": ("import",),
     "multicomponent_refiner": ("peaks",),
     "qpa_preview": ("phase",),
@@ -172,7 +172,7 @@ TASK_CONTEXT_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     "solve_structure": ("has_candidate_cell",),
     "pawley_lebail": ("has_candidate_cell_or_structure",),
     "rietveld": ("has_atomic_structure",),
-    "exclusion_study": ("has_candidate_cell_or_structure",),
+    "exclusion_study": (),  # CIFs are imported and checked inside the Studio.
     "multicomponent_refiner": ("has_cif_candidates",),
     "validated_qpa": ("has_structure_refinement",),
 }

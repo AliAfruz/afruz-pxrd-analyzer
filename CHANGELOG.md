@@ -3,6 +3,26 @@
 All notable user-visible changes are recorded here. Versions follow semantic
 versioning where practical.
 
+## [23.3.1] — 2026-10-04 (local development)
+
+### Changed
+
+- Moved the step-wise exclusion laboratory out of the crowded main workspace
+  into a persistent, non-modal **Step-wise Refinement Studio** window.
+- Added a full-height central XRD canvas, compact Steps/CIFs/Settings/Zones
+  controls on the left, and History/Reflections on the right. Side panels
+  scroll independently; queue controls remain pinned and visible.
+- Added maximization/restoration, splitter resizing, Reset view, direct AFZ
+  saving and history export. AFZ retains panel widths and active control tabs.
+- Changed the workflow and Analysis-menu actions to open the Studio, not start
+  an invisible refinement. Opening it no longer needs a global phase/CIF
+  selection; numerical commands still validate their own inputs normally.
+- The window reuses the same project-owned laboratory. Closing/Escape hides
+  it without losing, duplicating or cancelling active jobs and saved history.
+- Numerical engines, established refiners and Crystal Studio are unchanged.
+  The previous installed application was backed up and verified. No GitHub
+  or Zenodo publication is part of this local patch.
+
 ## [23.3.0] — 2026-10-04 (local development)
 
 ### Added

@@ -102,8 +102,8 @@ class AnalysisPanelMixin:
             ),
             "exclusion_study": AnalysisPanelDescriptor(
                 "Sequential refinement & exclusions",
-                "Use the central multi-CIF Pawley/Le Bail/Rietveld history lab or launch the preserved isolated investigation windows.",
-                "Refine",
+                "Open the separate Step-wise Refinement Studio for CIF candidate queues, labelled exclusions and result history.",
+                "Open",
             ),
             "doping_series": AnalysisPanelDescriptor(
                 "Doping-series comparison",
@@ -208,7 +208,7 @@ class AnalysisPanelMixin:
             "solve_structure": "Test robustness",
             "pawley_lebail": "Run Pawley / Le Bail",
             "rietveld": "Run Rietveld",
-            "exclusion_study": "Run central Rietveld",
+            "exclusion_study": "Open Refinement Studio",
             "doping_series": "Compare doping series",
             "multicomponent_refiner": "Run multiphase search",
             "qpa_preview": "Calculate QPA preview",

@@ -447,7 +447,7 @@ class WorkflowWindowMixin:
             "solve_structure": "Test robustness",
             "pawley_lebail": "Run Pawley / Le Bail",
             "rietveld": "Run Rietveld",
-            "exclusion_study": "Run central Rietveld",
+            "exclusion_study": "Open Refinement Studio",
             "multicomponent_refiner": "Run multiphase search",
             "qpa_preview": "Calculate QPA preview",
             "validated_qpa": "Calculate validated QPA",
@@ -458,7 +458,7 @@ class WorkflowWindowMixin:
         }
         task_state = self.workflow_task_states.get(self.active_workflow_task)
         requires_dataset = self.active_workflow_task not in {
-            "project_home", "cif_simulator", "full_gui", "advanced"
+            "project_home", "cif_simulator", "exclusion_study", "full_gui", "advanced"
         }
         enabled = dataset is not None or not requires_dataset
         tooltip = TASK_BY_KEY.get(self.active_workflow_task).guidance if self.active_workflow_task in TASK_BY_KEY else "Run the current analysis."
@@ -507,7 +507,7 @@ class WorkflowWindowMixin:
             "rietveld": lambda: self._click_workspace_button(
                 self.rietveld_widget, "run_button"
             ),
-            "exclusion_study": lambda: self.exclusion_refinement_widget.sequential_workspace.run_method("rietveld"),
+            "exclusion_study": self.exclusion_refinement_widget.open_studio,
             "multicomponent_refiner": lambda: self._click_workspace_button(
                 self.multicomponent_refiner_widget, "run_button"
             ),

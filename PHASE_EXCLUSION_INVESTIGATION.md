@@ -1,6 +1,6 @@
 # Phase-Exclusion Investigation and CIF PXRD Simulation
 
-Release: 23.3.0 local development build
+Release: 23.3.1 local development build
 
 ## Purpose
 
@@ -21,10 +21,10 @@ and processed arrays in the project remain unchanged.
 
 ## Central sequential-refinement laboratory
 
-Open **Refinement & Quantification -> Phase-exclusion investigation**. The
-large central plot always shows either the selected experimental pattern or a
+Open **Refinement & Quantification -> Sequential refinement & exclusions ->
+Open Refinement Studio**. The separate window's large central plot shows either the selected experimental pattern or a
 frozen historical refinement. Add any number of CIF files to the library and
-select one active CIF for the next run. The three main buttons start Pawley,
+select one active CIF for the next run. The three buttons under **CIFs** start Pawley,
 Le Bail or Rietveld refinement directly from that CIF. Raw measured intensity
 is the default input; processed intensity must be selected deliberately.
 
@@ -37,7 +37,7 @@ difference profile. **Continue from selected run** restores that run's CIF,
 settings and exclusion set as the starting point for a new child run; the old
 record is never overwritten.
 
-To prepare the next refinement, drag the amber selector or left-click the plot
+To prepare the next refinement, open **Zones**, drag the amber selector or left-click the plot
 to center it, provide a scientific label, and add a region or peak-width
 exclusion. The next run omits both measured and calculated profile points in
 those closed intervals from its objective and fit-domain statistics. CIF
@@ -47,7 +47,7 @@ factors are not deleted: deleting selected crystallographic reflections from a
 Rietveld structure model would be physically invalid and could suppress real
 profile tails outside the interval.
 
-**Full history export** creates one ZIP containing the lineage table, workspace
+**Export history (.zip)** creates one ZIP containing the lineage table, workspace
 manifest, a clean full refinement TXT bundle for every completed ID, applied
 exclusion tables, provenance, reflection activity and available source CIFs.
 AFZ project saving stores the CIF library, run counter, complete history,
@@ -58,7 +58,7 @@ as a new ID; its in-memory iteration cannot be resumed safely.
 
 ## Step-wise CIF candidate queue
 
-The **Step-wise queue** tab extends the same laboratory with automatic serial
+The Studio's left **Steps** tab extends the same laboratory with automatic serial
 candidate runs and result selection for follow-up steps. Each run fits just
 one CIF, as opposed to fitting active CIFs together. See
 [STEPWISE_CIF_QUEUE.md](STEPWISE_CIF_QUEUE.md) for the complete procedure,
@@ -68,7 +68,7 @@ the independent investigation windows remain available.
 ## Using excluded regions
 
 1. Select the experimental dataset and open **Refinement & Quantification ->
-   Phase-exclusion investigation**.
+   Sequential refinement & exclusions**.
 2. Open Pawley, Le Bail, or Rietveld. These are separate non-modal windows, so
    the original refinement tabs remain available for the full-range control
    fit.

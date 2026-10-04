@@ -41,6 +41,7 @@ from .sequential_refinement_workspace import SequentialRefinementWorkspace
 from .text_export import write_table_txt
 from .whole_pattern_widget import WholePatternRefinementWidget
 from .widgets import NoWheelDoubleSpinBox
+from .version import APP_VERSION
 
 
 class _InvestigationMainWindowProxy:
@@ -651,6 +652,40 @@ class ExclusionRefinementDialog(QDialog):
         super().closeEvent(event)
 
 
+class SequentialRefinementStudioDialog(QDialog):
+    """Persistent non-modal window for the single project-owned laboratory.
+
+    Closing only hides it: queued jobs and scientific state are never discarded
+    or copied into an independent model. MainWindow remains the save/lifecycle
+    owner, and its existing shutdown guard cancels the same worker.
+    """
+
+    def __init__(self, workspace, parent=None):
+        super().__init__(parent if isinstance(parent, QWidget) else None)
+        self.refinement_widget = workspace
+        self.has_been_shown = False
+        self.setWindowTitle(f"Step-wise Refinement Studio — Afruz PXRD {APP_VERSION}")
+        self.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.WindowSystemMenuHint
+                            | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
+        self.setModal(False)
+        self.setSizeGripEnabled(True)
+        self.setAttribute(Qt.WA_DeleteOnClose, False)
+        self.resize(1680, 960)
+        self.setMinimumSize(1040, 640)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(workspace)
+        workspace.show()
+
+    def reject(self):
+        # Escape is equivalent to the title-bar close, not scientific reset.
+        self.hide()
+
+    def closeEvent(self, event):
+        self.hide()
+        event.accept()
+
+
 class ExclusionRefinementHubWidget(QWidget):
     """Central sequential lab plus the three original isolated investigations."""
 
@@ -666,19 +701,19 @@ class ExclusionRefinementHubWidget(QWidget):
         self._dialogs: dict[str, ExclusionRefinementDialog] = {}
         self._widgets: dict[str, QWidget] = {}
         self._pending_state: dict[str, dict] = {}
+        self.studio_dialog = None
         self._build_ui()
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
-        heading = QLabel("Sequential Multiphase Refinement and Exclusion Laboratory")
+        heading = QLabel("Step-wise Refinement Studio")
         heading.setObjectName("sectionTitle")
         layout.addWidget(heading)
         description = QLabel(
-            "Run an unlimited lineage of Pawley, Le Bail and structure-constrained Rietveld refinements from "
-            "one central profile. Import several CIF models, select one model for each run, label peaks or "
-            "2theta intervals for the next run, and return to any frozen result by its unique refinement ID. "
-            "The established production refinement tabs remain unchanged."
+            "Open the laboratory in its own resizable window. Compare CIF candidates one by one, "
+            "retain selected results for later steps, and label excluded regions on a large XRD canvas. "
+            "The established refinement workspaces remain unchanged."
         )
         description.setWordWrap(True)
         description.setObjectName("mutedLabel")
@@ -686,7 +721,20 @@ class ExclusionRefinementHubWidget(QWidget):
         layout.addWidget(description)
 
         self.sequential_workspace = SequentialRefinementWorkspace(self.main_window, self)
-        layout.addWidget(self.sequential_workspace, 1)
+        self.sequential_workspace.hide()
+        self.open_studio_button = QPushButton("Open Refinement Studio — separate window")
+        self.open_studio_button.setObjectName("primaryButton")
+        self.open_studio_button.setMinimumHeight(52)
+        layout.addWidget(self.open_studio_button)
+        self.studio_status = QLabel("Your CIF library, steps and run history remain part of the current .AFZ project.")
+        self.studio_status.setWordWrap(True)
+        self.studio_status.setObjectName("mutedLabel")
+        layout.addWidget(self.studio_status)
+        window_note = QLabel("Closing the Studio hides it; active and queued runs can continue while the main application stays open. Reopen it here to review progress.")
+        window_note.setWordWrap(True)
+        window_note.setObjectName("mutedLabel")
+        layout.addWidget(window_note)
+        layout.addStretch(1)
 
         legacy = QGroupBox("Original separate investigation windows (preserved)")
         button_row = QHBoxLayout(legacy)
@@ -710,6 +758,20 @@ class ExclusionRefinementHubWidget(QWidget):
         self.pawley_button.clicked.connect(lambda: self.open_window("pawley"))
         self.lebail_button.clicked.connect(lambda: self.open_window("lebail"))
         self.rietveld_button.clicked.connect(lambda: self.open_window("rietveld"))
+        self.open_studio_button.clicked.connect(self.open_studio)
+
+    def open_studio(self):
+        if self.studio_dialog is None:
+            self.studio_dialog = SequentialRefinementStudioDialog(self.sequential_workspace, self.main_window)
+        self.sequential_workspace.refresh_for_selected_dataset()
+        if not self.studio_dialog.has_been_shown:
+            self.studio_dialog.has_been_shown = True
+            self.studio_dialog.showMaximized()
+        else:
+            self.studio_dialog.show()
+        self.studio_dialog.raise_()
+        self.studio_dialog.activateWindow()
+        return self.studio_dialog
 
     def _create_widget(self, key: str):
         if key == "pawley":
@@ -761,11 +823,12 @@ class ExclusionRefinementHubWidget(QWidget):
             widget.refresh_for_selected_dataset()
 
     def run_analysis(self):
-        self.sequential_workspace.refresh_for_selected_dataset()
+        self.open_studio()
 
     def validate_inputs(self):
-        dataset = self.main_window.selected_dataset()
-        return (dataset is not None, "Select an experimental dataset first." if dataset is None else "")
+        # This workspace action opens a window; numerical commands inside it
+        # still validate the selected dataset, CIF and fit-domain masks.
+        return True, ""
 
     def apply_theme(self, theme_name):
         self.sequential_workspace.apply_theme(theme_name)

@@ -280,22 +280,22 @@ class SequentialExclusionEditor(QGroupBox):
         self.half_width = self._spin(0.12)
         self.half_width.setRange(0.001, 10.0)
         self.label = QLineEdit("Suspected impurity peak")
-        self.add_region = QPushButton("Exclude labelled region in next run")
-        self.add_peak = QPushButton("Exclude peak at selector center")
+        self.add_region = QPushButton("Exclude labelled region")
+        self.add_peak = QPushButton("Exclude peak at selector")
         self.remove = QPushButton("Remove selected")
-        self.clear = QPushButton("Clear next-run exclusions")
+        self.clear = QPushButton("Clear zones")
         controls.addWidget(QLabel("Start 2theta"), 0, 0)
         controls.addWidget(self.start, 0, 1)
-        controls.addWidget(QLabel("End 2theta"), 0, 2)
-        controls.addWidget(self.end, 0, 3)
-        controls.addWidget(QLabel("Peak half-width"), 1, 0)
-        controls.addWidget(self.half_width, 1, 1)
-        controls.addWidget(QLabel("Scientific label"), 1, 2)
-        controls.addWidget(self.label, 1, 3)
-        controls.addWidget(self.add_region, 2, 0, 1, 2)
-        controls.addWidget(self.add_peak, 2, 2, 1, 2)
-        controls.addWidget(self.remove, 3, 2)
-        controls.addWidget(self.clear, 3, 3)
+        controls.addWidget(QLabel("End 2theta"), 1, 0)
+        controls.addWidget(self.end, 1, 1)
+        controls.addWidget(QLabel("Peak half-width"), 2, 0)
+        controls.addWidget(self.half_width, 2, 1)
+        controls.addWidget(QLabel("Scientific label"), 3, 0, 1, 2)
+        controls.addWidget(self.label, 4, 0, 1, 2)
+        controls.addWidget(self.add_region, 5, 0, 1, 2)
+        controls.addWidget(self.add_peak, 6, 0, 1, 2)
+        controls.addWidget(self.remove, 7, 0)
+        controls.addWidget(self.clear, 7, 1)
         layout.addLayout(controls)
         self.table = QTableWidget(0, 4)
         self.table.setHorizontalHeaderLabels(["Start", "End", "Width", "Label / hypothesis"])
@@ -502,15 +502,18 @@ class SequentialRefinementWorkspace(QWidget):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(8)
         top = QHBoxLayout()
+        title = QLabel("Step-wise Refinement Studio")
+        title.setObjectName("sectionTitle")
         self.dataset_label = QLabel("No experimental pattern selected")
         self.dataset_label.setObjectName("mutedLabel")
         self.dataset_label.setMinimumWidth(0)
         self.dataset_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         install_label_copy_menu(self.dataset_label)
         self.cif_combo = QComboBox()
-        self.cif_combo.setMinimumWidth(260)
+        self.cif_combo.setMinimumWidth(0)
         self.add_cif = QPushButton("Add CIF(s)...")
         self.add_active_cif = QPushButton("Add active CIF")
         self.remove_cif = QPushButton("Remove CIF")
@@ -520,36 +523,81 @@ class SequentialRefinementWorkspace(QWidget):
         status = cuda_status()
         self.use_gpu.setChecked(bool(status.get("available")))
         self.use_gpu.setToolTip(str(status.get("reason") or status.get("device_name") or "GPU status unavailable"))
-        top.addWidget(QLabel("Dataset"))
+        self.save_project_button = QPushButton("Save .AFZ")
+        save_callback = getattr(self.main_window, "save_project", None)
+        self.save_project_button.setEnabled(callable(save_callback))
+        if callable(save_callback):
+            self.save_project_button.clicked.connect(lambda: save_callback())
+        self.export_button = QPushButton("Export history (.zip)")
+        self.reset_view_button = QPushButton("Reset view")
+        self.queue_import_button = QPushButton("Add CIF(s)...")
+        top.addWidget(title)
         top.addWidget(self.dataset_label, 1)
-        top.addWidget(QLabel("Active CIF"))
-        top.addWidget(self.cif_combo)
-        top.addWidget(self.add_cif)
-        top.addWidget(self.add_active_cif)
-        top.addWidget(self.remove_cif)
-        top.addWidget(self.use_processed)
-        top.addWidget(self.use_gpu)
+        top.addWidget(self.queue_import_button)
+        top.addWidget(self.reset_view_button)
+        top.addWidget(self.save_project_button)
+        top.addWidget(self.export_button)
         layout.addLayout(top)
 
-        run_row = QHBoxLayout()
+        # Keep one calculation/state owner. Only its presentation moves into
+        # a separate window: controls | full-height XRD canvas | run history.
+        self.studio_splitter = QSplitter(Qt.Horizontal)
+        self.studio_splitter.setChildrenCollapsible(False)
+        self.detail_tabs = QTabWidget()
+        self.detail_tabs.setMinimumWidth(280)
+        self.detail_tabs.addTab(self._queue_panel(), "Steps")
+        model_panel = QWidget()
+        model_layout = QVBoxLayout(model_panel)
+        model_layout.setContentsMargins(8, 8, 8, 8)
+        form = QFormLayout()
+        form.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        form.addRow("Manual-run CIF", self.cif_combo)
+        model_layout.addLayout(form)
+        model_layout.addWidget(self.add_cif)
+        model_layout.addWidget(self.add_active_cif)
+        model_layout.addWidget(self.remove_cif)
+        model_layout.addWidget(self._cif_library_panel(), 1)
+        self.run_label = QLineEdit()
+        self.run_label.setPlaceholderText("Optional run label / hypothesis")
+        model_layout.addWidget(self.run_label)
         self.pawley_button = QPushButton("1  Run Pawley")
         self.lebail_button = QPushButton("2  Run Le Bail")
         self.rietveld_button = QPushButton("3  Run Rietveld")
         for button in (self.pawley_button, self.lebail_button, self.rietveld_button):
-            button.setMinimumHeight(46)
             button.setObjectName("primaryButton")
-            run_row.addWidget(button)
-        self.cancel_button = QPushButton("Cancel current run")
-        self.cancel_button.setEnabled(False)
-        self.export_button = QPushButton("Full history export (.zip)")
-        self.run_label = QLineEdit()
-        self.run_label.setPlaceholderText("Optional run label / hypothesis")
-        run_row.addWidget(self.cancel_button)
-        run_row.addWidget(self.export_button)
-        run_row.addWidget(self.run_label, 1)
-        layout.addLayout(run_row)
+            model_layout.addWidget(button)
+        model_note = QLabel("Manual buttons fit the selected CIF once. Use Steps for automatic candidate queues.")
+        model_note.setWordWrap(True)
+        model_note.setObjectName("mutedLabel")
+        model_layout.addWidget(model_note)
+        self.detail_tabs.addTab(self._scroll_panel(model_panel), "CIFs")
+        self.detail_tabs.addTab(self._scroll_panel(self._settings_panel()), "Settings")
+        self.exclusion_editor = SequentialExclusionEditor()
+        self.detail_tabs.addTab(self._scroll_panel(self.exclusion_editor), "Zones")
+        self.studio_splitter.addWidget(self.detail_tabs)
+
+        self.plot = CopyablePlotWidget(background=THEMES[DEFAULT_THEME_NAME]["plot_background"], copy_title="Sequential refinement history")
+        self.plot.setMinimumWidth(380)
+        self.plot.showGrid(x=True, y=True, alpha=THEMES[DEFAULT_THEME_NAME]["grid_alpha"])
+        self.plot.setLabel("bottom", "2theta", units="degrees")
+        self.plot.setLabel("left", "Intensity")
+        self.legend = self.plot.addLegend()
+        self.studio_splitter.addWidget(self.plot)
+        self.result_tabs = QTabWidget()
+        self.result_tabs.setMinimumWidth(300)
+        self.result_tabs.addTab(self._history_panel(), "History")
+        self.result_tabs.addTab(self._reflection_panel(), "Reflections")
+        self.studio_splitter.addWidget(self.result_tabs)
+        self.studio_splitter.setStretchFactor(0, 0)
+        self.studio_splitter.setStretchFactor(1, 1)
+        self.studio_splitter.setStretchFactor(2, 0)
+        self.studio_splitter.setSizes([340, 1000, 380])
+        layout.addWidget(self.studio_splitter, 1)
+        self.exclusion_editor.bind_plot(self.plot)
 
         progress_row = QHBoxLayout()
+        self.cancel_button = QPushButton("Cancel current run")
+        self.cancel_button.setEnabled(False)
         self.progress = QProgressBar()
         self.progress.setRange(0, 1)
         self.progress.setValue(0)
@@ -561,38 +609,10 @@ class SequentialRefinementWorkspace(QWidget):
         install_label_copy_menu(self.progress_label)
         progress_row.addWidget(self.progress, 1)
         progress_row.addWidget(self.progress_label, 2)
+        progress_row.addWidget(self.cancel_button)
         layout.addLayout(progress_row)
-
-        splitter = QSplitter(Qt.Horizontal)
-        center = QSplitter(Qt.Vertical)
-        self.plot = CopyablePlotWidget(background=THEMES[DEFAULT_THEME_NAME]["plot_background"], copy_title="Sequential refinement history")
-        self.plot.showGrid(x=True, y=True, alpha=THEMES[DEFAULT_THEME_NAME]["grid_alpha"])
-        self.plot.setLabel("bottom", "2theta", units="degrees")
-        self.plot.setLabel("left", "Intensity")
-        self.legend = self.plot.addLegend()
-        center.addWidget(self.plot)
-        self.detail_tabs = QTabWidget()
-        self.exclusion_editor = SequentialExclusionEditor()
-        self.detail_tabs.addTab(self.exclusion_editor, "Next-run exclusions")
-        self.detail_tabs.addTab(self._settings_panel(), "Refinement controls")
-        self.detail_tabs.addTab(self._cif_library_panel(), "CIF library")
-        self.detail_tabs.addTab(self._reflection_panel(), "Active/inactive CIF reflections")
-        self.detail_tabs.addTab(self._queue_panel(), "Step-wise queue")
-        center.addWidget(self.detail_tabs)
-        center.setSizes([610, 260])
-        center.setStretchFactor(0, 4)
-        center.setStretchFactor(1, 2)
-        splitter.addWidget(center)
-        splitter.addWidget(self._history_panel())
-        splitter.setSizes([1150, 540])
-        splitter.setStretchFactor(0, 4)
-        splitter.setStretchFactor(1, 1)
-        layout.addWidget(splitter, 1)
-        self.exclusion_editor.bind_plot(self.plot)
-
         boundary = QLabel(
-            "Scientific boundary: masking is a fit-domain decision, not deletion of crystallographic hkl reflections. "
-            "Each run permanently records its CIF, method, parameters, parent ID, excluded regions and inactive-reflection audit."
+            "One CIF per run • fixed input/model snapshots • excluded zones are fit-domain masks, not deleted hkl reflections."
         )
         boundary.setWordWrap(True)
         boundary.setStyleSheet("color: #e7b84b; font-weight: 600;")
@@ -600,6 +620,7 @@ class SequentialRefinementWorkspace(QWidget):
         layout.addWidget(boundary)
 
         self.add_cif.clicked.connect(self.add_cif_files)
+        self.queue_import_button.clicked.connect(self.add_cif_files)
         self.add_active_cif.clicked.connect(self.add_active_reference_cif)
         self.remove_cif.clicked.connect(self.remove_active_cif)
         self.cif_combo.currentIndexChanged.connect(self._active_cif_changed)
@@ -609,6 +630,7 @@ class SequentialRefinementWorkspace(QWidget):
         self.rietveld_button.clicked.connect(lambda: self.run_method("rietveld"))
         self.cancel_button.clicked.connect(self.cancel_current_run)
         self.export_button.clicked.connect(self.export_full_history)
+        self.reset_view_button.clicked.connect(self.reset_studio_view)
         self.history_table.itemSelectionChanged.connect(self._history_selection_changed)
         self.history_table.itemChanged.connect(self._history_item_changed)
         self.continue_button.clicked.connect(self.continue_from_selected)
@@ -616,31 +638,54 @@ class SequentialRefinementWorkspace(QWidget):
         self.exclusion_editor.changed.connect(self._draft_exclusions_changed)
         self.plot.scene().sigMouseClicked.connect(self._plot_clicked)
 
-    def _queue_panel(self):
+    @staticmethod
+    def _scroll_panel(panel):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.NoFrame)
+        scroll.setWidget(panel)
+        return scroll
+
+    def reset_studio_view(self):
+        self.studio_splitter.setSizes([340, 1000, 380])
+        self.plot.enableAutoRange()
+
+    def open_candidates(self):
+        self.detail_tabs.setCurrentIndex(0)
+
+    def _queue_panel(self):
+        root = QWidget()
+        root_layout = QVBoxLayout(root)
+        root_layout.setContentsMargins(6, 6, 6, 6)
+        root_layout.setSpacing(6)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.NoFrame)
         panel = QWidget()
         layout = QVBoxLayout(panel)
+        layout.setContentsMargins(2, 2, 2, 2)
         form = QFormLayout()
         form.setRowWrapPolicy(QFormLayout.WrapLongRows)
         form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.step_selector = QComboBox()
+        self.step_selector.setMinimumWidth(0)
+        self.step_selector.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.step_name = QLineEdit()
         self.queue_method = QComboBox()
         for method, label in METHOD_LABELS.items():
             self.queue_method.addItem(label, method)
         self.queue_method.setCurrentIndex(2)
-        form.addRow("Review / run step", self.step_selector)
+        form.addRow("Step", self.step_selector)
         form.addRow("Step label", self.step_name)
         form.addRow("Queue method", self.queue_method)
         layout.addLayout(form)
-        self.common_domain = QCheckBox("Same range and exclusions for all candidates")
+        self.common_domain = QCheckBox("Shared range and exclusions")
         self.common_domain.setChecked(True)
         self.common_domain.setToolTip(
             "Checked: every run gets the current range and labelled exclusions at queue creation. "
             "Unchecked: each child inherits its own parent's range and exclusions. Other settings are shared."
         )
-        self.continue_after_failure = QCheckBox("Continue queue after a failed candidate")
+        self.continue_after_failure = QCheckBox("Continue after failed candidate")
         self.continue_after_failure.setChecked(True)
         layout.addWidget(self.common_domain)
         layout.addWidget(self.continue_after_failure)
@@ -649,39 +694,52 @@ class SequentialRefinementWorkspace(QWidget):
         self.candidate_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.candidate_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.candidate_table.setMinimumHeight(160)
+        self.candidate_table.setWordWrap(False)
+        # Keep labels and activation immediately visible in the compact side
+        # panel. Original CIF, lineage and status remain in tooltips/copy data.
+        for column in (1, 2, 4, 5):
+            self.candidate_table.setColumnHidden(column, True)
         self.candidate_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.candidate_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
         install_table_copy_menu(self.candidate_table)
         layout.addWidget(self.candidate_table, 1)
         buttons = QGridLayout()
-        self.queue_checked_button = QPushButton("Queue checked candidates")
-        self.start_queue_button = QPushButton("Start / resume this step")
+        self.queue_checked_button = QPushButton("Queue selected")
+        self.queue_checked_button.setToolTip("Freeze checked CIF candidates, controls and exclusions into queued attempts.")
+        self.start_queue_button = QPushButton("Start / resume")
         self.start_queue_button.setObjectName("primaryButton")
-        self.pause_queue_button = QPushButton("Pause after current run")
-        self.next_step_button = QPushButton("Next step from checked results")
-        self.move_candidate_up = QPushButton("Move candidate up")
-        self.move_candidate_down = QPushButton("Move candidate down")
-        self.discard_queue_button = QPushButton("Discard unstarted runs in this step")
+        self.pause_queue_button = QPushButton("Pause queue")
+        self.pause_queue_button.setToolTip("Let the active candidate finish; do not dispatch another queued job.")
+        self.next_step_button = QPushButton("Next step")
+        self.next_step_button.setToolTip("Create the next step from the Next checkboxes in completed result history.")
+        self.move_candidate_up = QPushButton("Move up")
+        self.move_candidate_down = QPushButton("Move down")
+        self.discard_queue_button = QPushButton("Discard pending attempts")
+        order_row = QHBoxLayout()
+        order_row.addWidget(self.move_candidate_up)
+        order_row.addWidget(self.move_candidate_down)
+        layout.addLayout(order_row)
+        layout.addWidget(self.discard_queue_button)
         for index, button in enumerate((self.queue_checked_button, self.start_queue_button,
-                                        self.pause_queue_button, self.next_step_button,
-                                        self.move_candidate_up, self.move_candidate_down)):
+                                        self.pause_queue_button, self.next_step_button)):
             buttons.addWidget(button, index // 2, index % 2)
-        buttons.addWidget(self.discard_queue_button, 3, 0, 1, 2)
-        layout.addLayout(buttons)
         self.queue_summary = QLabel("Step 1: check the CIF candidates, queue them, then start.")
         self.queue_summary.setWordWrap(True)
         self.queue_summary.setObjectName("mutedLabel")
         install_label_copy_menu(self.queue_summary)
-        layout.addWidget(self.queue_summary)
         note = QLabel(
-            "Each run fits ONE CIF against the original measurement, not a subtracted residual. "
-            "Use the Next checkboxes in history to choose completed results for Step 2, Step 3, etc. "
-            "Only compare R factors directly when the input and fit domains match."
+            "Add CIFs under CIFs. Check Next in history to retain completed candidates for another step. "
+            "Compare R factors only on matching inputs and fit domains."
         )
         note.setWordWrap(True)
         note.setObjectName("mutedLabel")
         layout.addWidget(note)
         scroll.setWidget(panel)
+        root_layout.addWidget(scroll, 1)
+        # Run controls are pinned outside the scroller, including on small
+        # screens: a long candidate list never hides Start or Next step.
+        root_layout.addWidget(self.queue_summary)
+        root_layout.addLayout(buttons)
         self.step_selector.currentIndexChanged.connect(self._step_selected)
         self.step_name.editingFinished.connect(self._step_name_changed)
         self.candidate_table.itemChanged.connect(self._candidate_item_changed)
@@ -695,7 +753,7 @@ class SequentialRefinementWorkspace(QWidget):
         for control in (self.common_domain, self.continue_after_failure):
             control.toggled.connect(self._queue_preferences_changed)
         self.queue_method.currentIndexChanged.connect(self._queue_preferences_changed)
-        return scroll
+        return root
 
     def _current_step(self, uid: str | None = None):
         dataset = self._current_dataset()
@@ -764,6 +822,11 @@ class SequentialRefinementWorkspace(QWidget):
             for column, value in enumerate(values):
                 item = QTableWidgetItem(str(value or ""))
                 item.setData(Qt.UserRole, candidate["candidate_uid"])
+                item.setToolTip(
+                    f"Candidate {index + 1}: {candidate.get('label')}\nCIF: {candidate.get('cif_name')}\n"
+                    f"Parent: {candidate.get('parent_run_id') or 'original CIF'}\n"
+                    f"Status: {records[-1]['status'] if records else 'Not queued'}"
+                )
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                 if column == 0:
                     item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
@@ -1015,6 +1078,8 @@ class SequentialRefinementWorkspace(QWidget):
     def _settings_panel(self):
         panel = QWidget()
         form = QFormLayout(panel)
+        form.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.wavelength = NoWheelDoubleSpinBox()
         self.wavelength.setRange(0.1, 5.0)
         self.wavelength.setDecimals(6)
@@ -1066,6 +1131,8 @@ class SequentialRefinementWorkspace(QWidget):
         form.addRow("Optimization points", self.optimization_points)
         form.addRow("Le Bail extraction cycles", self.extraction_cycles)
         form.addRow("Cell bounds (+/- %)", self.cell_tolerance)
+        form.addRow(self.use_gpu)
+        form.addRow(self.use_processed)
         form.addRow(self.refine_cell)
         form.addRow(self.refine_profile)
         form.addRow(self.refine_zero)
@@ -1104,7 +1171,7 @@ class SequentialRefinementWorkspace(QWidget):
 
     def _history_panel(self):
         group = QGroupBox("Refinement lineage / history")
-        group.setMinimumWidth(520)
+        group.setMinimumWidth(0)
         layout = QVBoxLayout(group)
         self.history_table = QTableWidget(0, 7)
         self.history_table.setHorizontalHeaderLabels(["Next", "Step", "Run ID / label", "Type", "CIF", "Rwp %", "Status"])
@@ -1112,10 +1179,18 @@ class SequentialRefinementWorkspace(QWidget):
         # CIF is already in the default candidate label and the row tooltip.
         # Retain the full column for data copying, without repeating it on screen.
         self.history_table.setColumnHidden(4, True)
+        self.history_table.setColumnHidden(1, True)
+        self.history_table.setColumnHidden(3, True)
         self.history_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.history_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.history_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.history_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.history_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        self.history_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.Fixed)
+        self.history_table.horizontalHeader().setSectionResizeMode(6, QHeaderView.Fixed)
+        self.history_table.setColumnWidth(0, 40)
+        self.history_table.setColumnWidth(5, 58)
+        self.history_table.setColumnWidth(6, 90)
         install_table_copy_menu(self.history_table)
         layout.addWidget(self.history_table, 1)
         self.history_summary = QLabel("No refinement history for this dataset.")
@@ -1571,6 +1646,7 @@ class SequentialRefinementWorkspace(QWidget):
             self.lebail_button,
             self.rietveld_button,
             self.add_cif,
+            self.queue_import_button,
             self.add_active_cif,
             self.remove_cif,
             self.cif_combo,
@@ -1937,6 +2013,11 @@ class SequentialRefinementWorkspace(QWidget):
             "checked_runs_by_uid": deepcopy(self.checked_runs_by_uid),
             "queue_scope": list(self._queue_scope) if self._queue_scope else None,
             "queue_resume_policy": "Paused on open; pending frozen jobs resume only after explicit Start.",
+            "studio_view": {
+                "panel_sizes": self.studio_splitter.sizes(),
+                "control_tab": self.detail_tabs.currentIndex(),
+                "result_tab": self.result_tabs.currentIndex(),
+            },
         }
 
     def set_state(self, state):
@@ -1981,3 +2062,11 @@ class SequentialRefinementWorkspace(QWidget):
         self.run_label.setText(str(state.get("run_label") or ""))
         self._set_busy(self._thread is not None)
         self._populate_candidates()
+        view = state.get("studio_view") or {}
+        sizes = view.get("panel_sizes")
+        if isinstance(sizes, list) and len(sizes) == 3 and all(isinstance(value, int) and value > 0 for value in sizes):
+            self.studio_splitter.setSizes(sizes)
+        for tabs, key in ((self.detail_tabs, "control_tab"), (self.result_tabs, "result_tab")):
+            index = view.get(key)
+            if isinstance(index, int) and 0 <= index < tabs.count():
+                tabs.setCurrentIndex(index)
