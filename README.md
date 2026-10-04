@@ -1,4 +1,4 @@
-# Afruz PXRD Analyzer 23.2.0
+# Afruz PXRD Analyzer 23.3.0
 
 [![Windows tests](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml/badge.svg)](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23119992.svg)](https://doi.org/10.5281/zenodo.23119992)
@@ -24,7 +24,7 @@ Release 23.0.0 is archived under the version DOI
 concept DOI is [10.5281/zenodo.23119992](https://doi.org/10.5281/zenodo.23119992).
 Follow [`PUBLISHING_GUIDE.md`](PUBLISHING_GUIDE.md) for future releases.
 
-Local development release 23.2.0 adds a central, lineage-aware sequential
+Local development release 23.2.0 added a central, lineage-aware sequential
 refinement laboratory alongside the CIF-to-PXRD simulation canvas and the three
 isolated phase-exclusion investigation windows. The laboratory supports a
 multi-CIF library with one auditable active model per run, unlimited uniquely
@@ -33,6 +33,16 @@ GPU-aware execution, frozen history plots, complete ZIP export, and AFZ project
 resume. The public GitHub/Zenodo release remains unchanged until a later
 reviewed release is explicitly published. See
 [`PHASE_EXCLUSION_INVESTIGATION.md`](PHASE_EXCLUSION_INVESTIGATION.md).
+Local release 23.3.0 adds the **Step-wise queue** tab to that laboratory. Check
+and label several CIF candidates, run one CIF at a time automatically, then
+check selected completed results to create Steps 2, 3, and later steps. Each
+queued attempt freezes its model, input, controls and labelled exclusions;
+selected parent cells/profile parameters initialize follow-up runs. AFZ saves
+retain pending jobs and all step plans, with explicit resume after reopening.
+This is separate candidate comparison, not a simultaneous multiphase fit or
+residual phase subtraction. The restored interface, established production
+refiners and Crystal Studio are retained. See
+[`STEPWISE_CIF_QUEUE.md`](STEPWISE_CIF_QUEUE.md) for the workflow.
 The complete release verification is recorded in
 [`RELEASE_AUDIT.md`](RELEASE_AUDIT.md), and fixture licensing/provenance is
 tracked in [`DATA_PROVENANCE.md`](DATA_PROVENANCE.md).

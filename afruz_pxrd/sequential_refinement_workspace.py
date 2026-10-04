@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import datetime, timezone
 import hashlib
+import json
 from pathlib import Path
 import tempfile
 import threading
@@ -13,7 +14,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import numpy as np
 import pyqtgraph as pg
 
-from PySide6.QtCore import QObject, QThread, Qt, Signal, Slot
+from PySide6.QtCore import QObject, QThread, Qt, QTimer, Signal, Slot
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -29,6 +30,8 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QScrollArea,
+    QSizePolicy,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
@@ -38,13 +41,14 @@ from PySide6.QtWidgets import (
 )
 
 from .context_copy import CopyablePlotWidget, install_label_copy_menu, install_table_copy_menu
+from .candidate_queue import can_advance, candidate_run_label, comparison_domain_signature, pack_snapshots, parent_seed, unpack_snapshots, warm_start_settings
 from .crystallography import calculate_powder_pattern, load_cif
 from .exclusion_regions import ExclusionRegion, attach_exclusion_audit, filter_arrays, inclusion_mask, merge_regions
 from .gpu_backend import cuda_status
 from .phase_identification import reference_from_cif_pattern
 from .refinement_export import export_refinement_txt_bundle
 from .rietveld_refinement import RietveldPhaseSpec, refine_rietveld
-from .text_export import safe_filename, write_mapping_txt, write_table_txt
+from .text_export import safe_filename, write_columns_txt, write_mapping_txt, write_table_txt
 from .theme import DEFAULT_THEME_NAME, THEMES
 from .whole_pattern_refinement import WholePatternPhaseSpec, refine_whole_pattern
 from .widgets import NoWheelDoubleSpinBox, NoWheelSpinBox
@@ -471,12 +475,20 @@ class SequentialExclusionEditor(QGroupBox):
 class SequentialRefinementWorkspace(QWidget):
     """Central, lineage-aware refinement laboratory built on validated engines."""
 
+    runCompleted = Signal(str)
+
     def __init__(self, main_window, parent=None):
         super().__init__(parent)
         self.main_window = main_window
         self.structures: list[dict] = []
         self.history_by_uid: dict[str, list[dict]] = {}
         self.next_run_counter = 1
+        self.steps_by_uid: dict[str, list[dict]] = {}
+        self.selected_step_by_uid: dict[str, str] = {}
+        self.checked_runs_by_uid: dict[str, list[str]] = {}
+        self._queue_running = False
+        self._queue_scope: tuple[str, str] | None = None
+        self._step_switching = False
         self._thread: QThread | None = None
         self._worker: SequentialRefinementWorker | None = None
         self._active_run_id: str | None = None
@@ -494,6 +506,8 @@ class SequentialRefinementWorkspace(QWidget):
         top = QHBoxLayout()
         self.dataset_label = QLabel("No experimental pattern selected")
         self.dataset_label.setObjectName("mutedLabel")
+        self.dataset_label.setMinimumWidth(0)
+        self.dataset_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         install_label_copy_menu(self.dataset_label)
         self.cif_combo = QComboBox()
         self.cif_combo.setMinimumWidth(260)
@@ -541,6 +555,9 @@ class SequentialRefinementWorkspace(QWidget):
         self.progress.setValue(0)
         self.progress_label = QLabel("Ready. Raw measured intensity is the default input.")
         self.progress_label.setObjectName("mutedLabel")
+        # Long user labels must not enlarge the entire central workspace.
+        self.progress_label.setMinimumWidth(0)
+        self.progress_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         install_label_copy_menu(self.progress_label)
         progress_row.addWidget(self.progress, 1)
         progress_row.addWidget(self.progress_label, 2)
@@ -560,13 +577,14 @@ class SequentialRefinementWorkspace(QWidget):
         self.detail_tabs.addTab(self._settings_panel(), "Refinement controls")
         self.detail_tabs.addTab(self._cif_library_panel(), "CIF library")
         self.detail_tabs.addTab(self._reflection_panel(), "Active/inactive CIF reflections")
+        self.detail_tabs.addTab(self._queue_panel(), "Step-wise queue")
         center.addWidget(self.detail_tabs)
         center.setSizes([610, 260])
         center.setStretchFactor(0, 4)
         center.setStretchFactor(1, 2)
         splitter.addWidget(center)
         splitter.addWidget(self._history_panel())
-        splitter.setSizes([1150, 330])
+        splitter.setSizes([1150, 540])
         splitter.setStretchFactor(0, 4)
         splitter.setStretchFactor(1, 1)
         layout.addWidget(splitter, 1)
@@ -592,10 +610,407 @@ class SequentialRefinementWorkspace(QWidget):
         self.cancel_button.clicked.connect(self.cancel_current_run)
         self.export_button.clicked.connect(self.export_full_history)
         self.history_table.itemSelectionChanged.connect(self._history_selection_changed)
+        self.history_table.itemChanged.connect(self._history_item_changed)
         self.continue_button.clicked.connect(self.continue_from_selected)
         self.show_latest_button.clicked.connect(self.select_latest_run)
         self.exclusion_editor.changed.connect(self._draft_exclusions_changed)
         self.plot.scene().sigMouseClicked.connect(self._plot_clicked)
+
+    def _queue_panel(self):
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        form = QFormLayout()
+        form.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        self.step_selector = QComboBox()
+        self.step_name = QLineEdit()
+        self.queue_method = QComboBox()
+        for method, label in METHOD_LABELS.items():
+            self.queue_method.addItem(label, method)
+        self.queue_method.setCurrentIndex(2)
+        form.addRow("Review / run step", self.step_selector)
+        form.addRow("Step label", self.step_name)
+        form.addRow("Queue method", self.queue_method)
+        layout.addLayout(form)
+        self.common_domain = QCheckBox("Same range and exclusions for all candidates")
+        self.common_domain.setChecked(True)
+        self.common_domain.setToolTip(
+            "Checked: every run gets the current range and labelled exclusions at queue creation. "
+            "Unchecked: each child inherits its own parent's range and exclusions. Other settings are shared."
+        )
+        self.continue_after_failure = QCheckBox("Continue queue after a failed candidate")
+        self.continue_after_failure.setChecked(True)
+        layout.addWidget(self.common_domain)
+        layout.addWidget(self.continue_after_failure)
+        self.candidate_table = QTableWidget(0, 6)
+        self.candidate_table.setHorizontalHeaderLabels(["Run", "Order", "CIF", "Candidate label", "Parent ID", "Latest status"])
+        self.candidate_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.candidate_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.candidate_table.setMinimumHeight(160)
+        self.candidate_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.candidate_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        install_table_copy_menu(self.candidate_table)
+        layout.addWidget(self.candidate_table, 1)
+        buttons = QGridLayout()
+        self.queue_checked_button = QPushButton("Queue checked candidates")
+        self.start_queue_button = QPushButton("Start / resume this step")
+        self.start_queue_button.setObjectName("primaryButton")
+        self.pause_queue_button = QPushButton("Pause after current run")
+        self.next_step_button = QPushButton("Next step from checked results")
+        self.move_candidate_up = QPushButton("Move candidate up")
+        self.move_candidate_down = QPushButton("Move candidate down")
+        self.discard_queue_button = QPushButton("Discard unstarted runs in this step")
+        for index, button in enumerate((self.queue_checked_button, self.start_queue_button,
+                                        self.pause_queue_button, self.next_step_button,
+                                        self.move_candidate_up, self.move_candidate_down)):
+            buttons.addWidget(button, index // 2, index % 2)
+        buttons.addWidget(self.discard_queue_button, 3, 0, 1, 2)
+        layout.addLayout(buttons)
+        self.queue_summary = QLabel("Step 1: check the CIF candidates, queue them, then start.")
+        self.queue_summary.setWordWrap(True)
+        self.queue_summary.setObjectName("mutedLabel")
+        install_label_copy_menu(self.queue_summary)
+        layout.addWidget(self.queue_summary)
+        note = QLabel(
+            "Each run fits ONE CIF against the original measurement, not a subtracted residual. "
+            "Use the Next checkboxes in history to choose completed results for Step 2, Step 3, etc. "
+            "Only compare R factors directly when the input and fit domains match."
+        )
+        note.setWordWrap(True)
+        note.setObjectName("mutedLabel")
+        layout.addWidget(note)
+        scroll.setWidget(panel)
+        self.step_selector.currentIndexChanged.connect(self._step_selected)
+        self.step_name.editingFinished.connect(self._step_name_changed)
+        self.candidate_table.itemChanged.connect(self._candidate_item_changed)
+        self.queue_checked_button.clicked.connect(self.queue_checked_candidates)
+        self.start_queue_button.clicked.connect(self.start_queue)
+        self.pause_queue_button.clicked.connect(self.pause_queue)
+        self.next_step_button.clicked.connect(self.prepare_next_step)
+        self.move_candidate_up.clicked.connect(lambda: self._move_candidate(-1))
+        self.move_candidate_down.clicked.connect(lambda: self._move_candidate(1))
+        self.discard_queue_button.clicked.connect(self.discard_pending_queue)
+        for control in (self.common_domain, self.continue_after_failure):
+            control.toggled.connect(self._queue_preferences_changed)
+        self.queue_method.currentIndexChanged.connect(self._queue_preferences_changed)
+        return scroll
+
+    def _current_step(self, uid: str | None = None):
+        dataset = self._current_dataset()
+        uid = str(uid or (dataset.uid if dataset is not None else ""))
+        selected = self.selected_step_by_uid.get(uid)
+        return next((row for row in self.steps_by_uid.get(uid, []) if row.get("step_id") == selected), None)
+
+    @staticmethod
+    def _candidate(structure: dict, parent=None):
+        return {
+            "candidate_uid": uuid4().hex[:20],
+            "cif_uid": str(structure.get("_sequential_refinement_uid") or ""),
+            "cif_name": str(structure.get("data_name") or structure.get("formula") or "CIF candidate"),
+            "label": str((parent or {}).get("candidate_label") or structure.get("data_name") or "CIF candidate"),
+            "parent_run_id": (parent or {}).get("run_id"), "enabled": True,
+            "structure_snapshot": deepcopy(structure) if parent else None,
+        }
+
+    def _ensure_steps(self, uid: str):
+        rows = self.steps_by_uid.setdefault(str(uid), [])
+        if not rows:
+            rows.append({"step_id": "S01", "number": 1, "name": "Compare CIF candidates",
+                         "candidates": [], "method_key": "rietveld", "common_domain": True,
+                         "continue_after_failure": True})
+        first = rows[0]
+        known = {candidate.get("cif_uid") for candidate in first.get("candidates", [])}
+        for structure in self.structures:
+            if structure.get("_sequential_refinement_uid") not in known:
+                first.setdefault("candidates", []).append(self._candidate(structure))
+        if self.selected_step_by_uid.get(str(uid)) not in {row["step_id"] for row in rows}:
+            self.selected_step_by_uid[str(uid)] = rows[0]["step_id"]
+
+    def _capture_step_draft(self, uid: str | None = None):
+        if self._step_switching:
+            return
+        step = self._current_step(uid)
+        if step is None:
+            return
+        step["draft_settings"] = deepcopy(self._settings())
+        step["draft_exclusions"] = [row.to_dict() for row in self.exclusion_editor.regions()]
+        step["method_key"] = self.queue_method.currentData() or "rietveld"
+        step["common_domain"] = self.common_domain.isChecked()
+        step["continue_after_failure"] = self.continue_after_failure.isChecked()
+
+    def _populate_steps(self):
+        dataset = self._current_dataset()
+        self.step_selector.blockSignals(True)
+        self.step_selector.clear()
+        if dataset is not None:
+            self._ensure_steps(str(dataset.uid))
+            for step in self.steps_by_uid[str(dataset.uid)]:
+                self.step_selector.addItem(f"Step {step['number']} — {step['name']}", step["step_id"])
+            self.step_selector.setCurrentIndex(self.step_selector.findData(self.selected_step_by_uid[str(dataset.uid)]))
+        self.step_selector.blockSignals(False)
+        self._populate_candidates()
+
+    def _populate_candidates(self):
+        step = self._current_step()
+        self.candidate_table.blockSignals(True)
+        candidates = (step or {}).get("candidates", [])
+        self.candidate_table.setRowCount(len(candidates))
+        for index, candidate in enumerate(candidates):
+            records = [row for row in self._history() if row.get("candidate_uid") == candidate["candidate_uid"]]
+            values = ("", index + 1, candidate.get("cif_name"), candidate.get("label"),
+                      candidate.get("parent_run_id") or "original CIF", records[-1]["status"] if records else "Not queued")
+            for column, value in enumerate(values):
+                item = QTableWidgetItem(str(value or ""))
+                item.setData(Qt.UserRole, candidate["candidate_uid"])
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                if column == 0:
+                    item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+                    item.setCheckState(Qt.Checked if candidate.get("enabled", True) else Qt.Unchecked)
+                if column == 3:
+                    item.setFlags(item.flags() | Qt.ItemIsEditable)
+                self.candidate_table.setItem(index, column, item)
+        self.candidate_table.blockSignals(False)
+        if step:
+            self.step_name.setText(str(step["name"]))
+        pending = sum(row.get("status") == "Queued" and row.get("step_id") == (step or {}).get("step_id") for row in self._history())
+        self.queue_summary.setText(
+            f"Step {(step or {}).get('number', 1)} · {len(candidates)} candidate(s) · {pending} queued. "
+            + ("Queue running: only one numerical worker runs at a time." if self._queue_running else "Queue paused / ready; start explicitly to run.")
+        )
+        editable = not self.is_running() and pending == 0
+        self.candidate_table.setEnabled(editable)
+        self.move_candidate_up.setEnabled(editable)
+        self.move_candidate_down.setEnabled(editable)
+        self.discard_queue_button.setEnabled(pending > 0 and not self.is_running())
+
+    def _step_selected(self, *_args):
+        dataset = self._current_dataset()
+        if dataset is None or self._step_switching:
+            return
+        self._capture_step_draft()
+        self.selected_step_by_uid[str(dataset.uid)] = str(self.step_selector.currentData())
+        self._apply_step_controls()
+        self._populate_candidates()
+        self._mark_dirty()
+
+    def _apply_step_controls(self):
+        step = self._current_step()
+        if step is None:
+            return
+        was_switching = self._step_switching
+        self._step_switching = True
+        try:
+            self._set_settings(step.get("draft_settings") or {})
+            if "draft_exclusions" in step:
+                self.exclusion_editor.set_regions(step["draft_exclusions"])
+            self.common_domain.setChecked(bool(step.get("common_domain", True)))
+            self.continue_after_failure.setChecked(bool(step.get("continue_after_failure", True)))
+            self.queue_method.setCurrentIndex(max(0, self.queue_method.findData(step.get("method_key", "rietveld"))))
+        finally:
+            self._step_switching = was_switching
+
+    def _step_name_changed(self):
+        step = self._current_step()
+        if step:
+            step["name"] = self.step_name.text().strip() or f"Step {step['number']}"
+            self._populate_steps()
+            self._mark_dirty()
+
+    def _queue_preferences_changed(self, *_args):
+        if not self._step_switching:
+            self._capture_step_draft()
+            self._mark_dirty()
+
+    def _candidate_item_changed(self, item):
+        step = self._current_step()
+        if not step or not 0 <= item.row() < len(step["candidates"]):
+            return
+        candidate = step["candidates"][item.row()]
+        if item.column() == 0:
+            candidate["enabled"] = item.checkState() == Qt.Checked
+        elif item.column() == 3:
+            candidate["label"] = item.text().strip() or candidate["cif_name"]
+        self._mark_dirty()
+
+    def _move_candidate(self, delta):
+        step = self._current_step()
+        index = self.candidate_table.currentRow()
+        target = index + delta
+        if step and 0 <= index < len(step["candidates"]) and 0 <= target < len(step["candidates"]):
+            step["candidates"][index], step["candidates"][target] = step["candidates"][target], step["candidates"][index]
+            self._populate_candidates()
+            self.candidate_table.selectRow(target)
+            self._mark_dirty()
+
+    def prepare_next_step(self):
+        dataset = self._current_dataset()
+        if dataset is None or self.is_running():
+            return
+        selected = set(self.checked_runs_by_uid.get(str(dataset.uid), []))
+        parents = [row for row in self._history() if row.get("run_id") in selected and can_advance(row)]
+        if not parents:
+            QMessageBox.information(self, "Choose results", "Check Next beside completed runs in the history table first.")
+            return
+        candidates = []
+        try:
+            for parent in parents:
+                structure = parent.get("structure_snapshot") or next(
+                    (row for row in self.structures if row.get("_sequential_refinement_uid") == parent.get("cif_uid")), None
+                )
+                if not structure:
+                    raise ValueError(f"Reimport the CIF for {parent['run_id']}; this legacy result has no model snapshot.")
+                parent_seed(structure, parent)  # Validate before making any new step.
+                candidates.append(self._candidate(structure, parent))
+        except ValueError as exc:
+            QMessageBox.warning(self, "Cannot advance candidate", str(exc))
+            return
+        self._capture_step_draft()
+        number = max(row["number"] for row in self.steps_by_uid[str(dataset.uid)]) + 1
+        step = {"step_id": f"S{number:02d}", "number": number, "name": "Selected candidate follow-up",
+                "candidates": candidates, "draft_settings": deepcopy(self._settings()),
+                "draft_exclusions": [row.to_dict() for row in self.exclusion_editor.regions()],
+                "method_key": self.queue_method.currentData(), "common_domain": True,
+                "continue_after_failure": self.continue_after_failure.isChecked()}
+        self.steps_by_uid[str(dataset.uid)].append(step)
+        self.selected_step_by_uid[str(dataset.uid)] = step["step_id"]
+        self.checked_runs_by_uid[str(dataset.uid)] = []
+        self.common_domain.setChecked(True)
+        self._populate_steps()
+        self._populate_history()
+        self._mark_dirty()
+        return step
+
+    def queue_checked_candidates(self):
+        dataset, step = self._current_dataset(), self._current_step()
+        if dataset is None or step is None or self.is_running():
+            return []
+        settings = self._settings()
+        if settings["two_theta_min"] >= settings["two_theta_max"]:
+            QMessageBox.warning(self, "Invalid range", "The minimum 2theta must be lower than the maximum.")
+            return []
+        method = str(self.queue_method.currentData())
+        prepared = []
+        already_pending = {row.get("candidate_uid") for row in self._history() if row.get("status") in {"Queued", "Running"}}
+        try:
+            for index, candidate in enumerate(step["candidates"]):
+                if not candidate.get("enabled", True) or candidate["candidate_uid"] in already_pending:
+                    continue
+                parent = self._record_by_id(candidate.get("parent_run_id"))
+                if candidate.get("parent_run_id") and parent is None:
+                    raise ValueError(f"Parent record is missing for {candidate['label']}; choose an available completed result.")
+                structure = candidate.get("structure_snapshot") or next(
+                    (row for row in self.structures if row.get("_sequential_refinement_uid") == candidate.get("cif_uid")), None
+                )
+                if structure is None:
+                    raise ValueError(f"CIF not available: {candidate['cif_name']}. Reimport it before queuing.")
+                seed, seed_audit = parent_seed(structure, parent)
+                current_settings = warm_start_settings(settings, parent)
+                regions = [row.to_dict() for row in self.exclusion_editor.regions()]
+                if parent and not self.common_domain.isChecked():
+                    for key in ("two_theta_min", "two_theta_max"):
+                        current_settings[key] = parent["settings"][key]
+                    regions = deepcopy(parent.get("excluded_regions") or [])
+                label = candidate_run_label(step["number"], index + 1, candidate["label"], method)
+                if self.run_label.text().strip():
+                    label += f" · {self.run_label.text().strip()}"
+                metadata = {"step_id": step["step_id"], "step_number": step["number"], "step_name": step["name"],
+                            "candidate_uid": candidate["candidate_uid"], "candidate_order": index + 1,
+                            "candidate_label": candidate["label"], "common_domain": self.common_domain.isChecked(),
+                            "continue_after_failure": self.continue_after_failure.isChecked(), "structure_seed_audit": seed_audit}
+                prepared.append(self._make_record(method, dataset, seed, current_settings, regions, label,
+                                                  candidate.get("parent_run_id"), metadata))
+        except (ValueError, TypeError, KeyError) as exc:
+            QMessageBox.warning(self, "Queue preparation failed", str(exc))
+            return []
+        if not prepared:
+            QMessageBox.information(self, "No new candidates", "Check candidate rows. Already queued candidates are not duplicated.")
+            return []
+        self._history().extend(prepared)
+        self._capture_step_draft()
+        self._populate_history()
+        self._populate_candidates()
+        self._mark_dirty()
+        return prepared
+
+    def start_queue(self):
+        dataset, step = self._current_dataset(), self._current_step()
+        if dataset is None or step is None or self.is_running():
+            return
+        self._queue_scope = (str(dataset.uid), str(step["step_id"]))
+        if not self._pending_queue():
+            QMessageBox.information(self, "No queued runs", "Queue checked candidates for this step first.")
+            return
+        self._queue_running = True
+        self._set_busy(True)
+        self._dispatch_next_queued()
+
+    def _pending_queue(self):
+        if not self._queue_scope:
+            return []
+        uid, step_id = self._queue_scope
+        return sorted(
+            [row for row in self.history_by_uid.get(uid, []) if row.get("step_id") == step_id and row.get("status") == "Queued"],
+            key=lambda row: row.get("candidate_order", 0),
+        )
+
+    def _dispatch_next_queued(self):
+        if not self._queue_running or self._thread is not None:
+            return
+        pending = self._pending_queue()
+        if not pending:
+            self._queue_running = False
+            self._set_busy(False)
+            self._populate_candidates()
+            self.progress_label.setText("Step queue finished. Check completed results to prepare the next step.")
+            self._mark_dirty()
+            return
+        try:
+            self._launch_record(pending[0])
+        except (ValueError, TypeError, KeyError) as exc:
+            record = pending[0]
+            record.update(status="Failed", error=f"Saved queue could not start: {exc}", completed_utc=_utc_now())
+            if not record.get("continue_after_failure", True):
+                self._queue_running = False
+            self._populate_history()
+            self._populate_candidates()
+            self._mark_dirty()
+            if self._queue_running:
+                QTimer.singleShot(0, self._dispatch_next_queued)
+            else:
+                self._set_busy(False)
+
+    def discard_pending_queue(self):
+        if self.is_running():
+            return
+        step = self._current_step() or {}
+        for record in self._history():
+            if record.get("step_id") == step.get("step_id") and record.get("status") == "Queued":
+                record.update(status="Discarded before start", completed_utc=_utc_now())
+        self._populate_history()
+        self._populate_candidates()
+        self._mark_dirty()
+
+    def pause_queue(self):
+        self._queue_running = False
+        self._set_busy(self._thread is not None)
+        self._populate_candidates()
+        self.progress_label.setText("Queue paused: the current run can finish; unstarted runs remain queued.")
+        self._mark_dirty()
+
+    def _history_item_changed(self, item):
+        if item.column() != 0:
+            return
+        dataset = self._current_dataset()
+        run_id = str(item.data(Qt.UserRole))
+        record = self._record_by_id(run_id)
+        if dataset is None or record is None or not can_advance(record):
+            return
+        selected = set(self.checked_runs_by_uid.get(str(dataset.uid), []))
+        selected.add(run_id) if item.checkState() == Qt.Checked else selected.discard(run_id)
+        self.checked_runs_by_uid[str(dataset.uid)] = sorted(selected)
+        self._mark_dirty()
 
     def _settings_panel(self):
         panel = QWidget()
@@ -676,6 +1091,7 @@ class SequentialRefinementWorkspace(QWidget):
         layout = QVBoxLayout(panel)
         self.reflection_summary = QLabel("Select a completed run to inspect its reflection-domain audit.")
         self.reflection_summary.setObjectName("mutedLabel")
+        self.reflection_summary.setWordWrap(True)
         install_label_copy_menu(self.reflection_summary)
         layout.addWidget(self.reflection_summary)
         self.reflection_table = QTableWidget(0, 5)
@@ -688,9 +1104,14 @@ class SequentialRefinementWorkspace(QWidget):
 
     def _history_panel(self):
         group = QGroupBox("Refinement lineage / history")
+        group.setMinimumWidth(520)
         layout = QVBoxLayout(group)
-        self.history_table = QTableWidget(0, 6)
-        self.history_table.setHorizontalHeaderLabels(["Unique ID", "Method", "CIF", "Rwp %", "Status", "Parent"])
+        self.history_table = QTableWidget(0, 7)
+        self.history_table.setHorizontalHeaderLabels(["Next", "Step", "Run ID / label", "Type", "CIF", "Rwp %", "Status"])
+        self.history_table.setWordWrap(False)
+        # CIF is already in the default candidate label and the row tooltip.
+        # Retain the full column for data copying, without repeating it on screen.
+        self.history_table.setColumnHidden(4, True)
         self.history_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.history_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.history_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -792,6 +1213,7 @@ class SequentialRefinementWorkspace(QWidget):
             return uid
         self.structures.append(copied)
         self._refresh_cif_library(select_uid=uid)
+        self._populate_steps()
         self._mark_dirty()
         return uid
 
@@ -881,11 +1303,14 @@ class SequentialRefinementWorkspace(QWidget):
 
     def refresh_for_selected_dataset(self):
         dataset = self._current_dataset()
+        if self._last_dataset_uid and (dataset is None or str(dataset.uid) != self._last_dataset_uid):
+            self._capture_step_draft(self._last_dataset_uid)
         if dataset is None:
             self._last_dataset_uid = None
             self.dataset_label.setText("No experimental pattern selected")
             self.exclusion_editor.set_dataset(None)
             self.history_table.setRowCount(0)
+            self._populate_steps()
             self._draw_preview(None)
             return
         dataset_changed = str(dataset.uid) != str(self._last_dataset_uid or "")
@@ -897,6 +1322,9 @@ class SequentialRefinementWorkspace(QWidget):
             self.exclusion_editor.set_dataset(dataset.uid, dataset.x)
         elif self.exclusion_editor._uid != str(dataset.uid):
             self.exclusion_editor.set_dataset(dataset.uid, dataset.x)
+        self._populate_steps()
+        if dataset_changed:
+            self._apply_step_controls()
         self._populate_history()
         selected = self._record_by_id(self._selected_history_run_id)
         if selected is None and dataset_changed:
@@ -926,7 +1354,7 @@ class SequentialRefinementWorkspace(QWidget):
                 return candidate
 
     def run_method(self, method: str):
-        if self._thread is not None:
+        if self.is_running():
             QMessageBox.information(self, "Refinement running", "Cancel or wait for the current refinement before starting another.")
             return
         dataset = self._current_dataset()
@@ -941,31 +1369,67 @@ class SequentialRefinementWorkspace(QWidget):
         if settings["two_theta_min"] >= settings["two_theta_max"]:
             QMessageBox.warning(self, "Invalid range", "The minimum 2theta must be lower than the maximum.")
             return
-        observed = dataset.y_processed if settings["use_processed"] and dataset.y_processed is not None else dataset.y_raw
         regions = self.exclusion_editor.regions()
+        try:
+            record = self._make_record(method, dataset, structure, settings, regions,
+                                       self.run_label.text().strip(), self._selected_parent_id())
+        except ValueError as exc:
+            QMessageBox.warning(self, "Invalid refinement input", str(exc))
+            return
+        self._history(dataset.uid).append(record)
+        self._launch_record(record)
+
+    def _make_record(self, method, dataset, structure, settings, regions, label, parent_id, metadata=None):
+        observed = dataset.y_processed if settings["use_processed"] and dataset.y_processed is not None else dataset.y_raw
+        x, y = np.asarray(dataset.x, dtype=float), np.asarray(observed, dtype=float)
+        if x.shape != y.shape:
+            raise ValueError("Observed coordinates and intensity lengths differ.")
+        signature = comparison_domain_signature(x, y, settings, regions)
+        included = inclusion_mask(x, regions) & (x >= settings["two_theta_min"]) & (x <= settings["two_theta_max"])
+        minimum = 80 if method == "rietveld" else 50
+        if np.count_nonzero(included) < minimum:
+            raise ValueError(f"At least {minimum} measured points must remain inside the fit range after exclusions.")
         run_id = self._reserve_run_id(method)
         record = {
             "run_id": run_id,
-            "parent_run_id": self._selected_parent_id(),
-            "label": self.run_label.text().strip(),
+            "parent_run_id": parent_id,
+            "label": label,
             "method_key": method,
             "method": METHOD_LABELS[method],
-            "status": "Running",
-            "started_utc": _utc_now(),
+            "status": "Queued",
+            "queued_utc": _utc_now(),
             "dataset_uid": dataset.uid,
             "dataset_name": dataset.name,
-            "cif_uid": self._active_structure_uid(),
+            "cif_uid": structure.get("_sequential_refinement_uid"),
             "cif_name": str(structure.get("data_name") or structure.get("formula") or "CIF phase"),
             "cif_source": str(structure.get("_sequential_refinement_source") or ""),
             "settings": deepcopy(settings),
-            "excluded_regions": [row.to_dict() for row in regions],
+            "excluded_regions": [row.to_dict() for row in merge_regions(regions)],
+            "structure_snapshot": deepcopy(structure),
+            "input_snapshot": {"x": x.tolist(), "observed_y": y.tolist()},
+            "comparison_domain_signature": signature,
             "result": None,
         }
-        self._history(dataset.uid).append(record)
+        record.update(deepcopy(metadata or {}))
+        return record
+
+    def _launch_record(self, record: dict):
+        if self._thread is not None:
+            raise RuntimeError("Only one candidate worker may run at a time.")
+        snapshot = record.get("input_snapshot") or {}
+        if not record.get("structure_snapshot") or not snapshot.get("x") or not snapshot.get("observed_y"):
+            raise ValueError("The queued run is missing its frozen model or measurement snapshot; queue a new attempt.")
+        run_id, method = str(record["run_id"]), str(record["method_key"])
+        settings = record["settings"]
+        record["status"] = "Running"
+        record["started_utc"] = _utc_now()
         self._active_run_id = run_id
-        self._active_dataset_uid = dataset.uid
-        self._selected_history_run_id = run_id
+        self._active_dataset_uid = str(record["dataset_uid"])
+        dataset = self._current_dataset()
+        if dataset is not None and str(dataset.uid) == self._active_dataset_uid:
+            self._selected_history_run_id = run_id
         self._populate_history(select_id=run_id)
+        self._populate_candidates()
         self._set_busy(True)
         self.progress.setRange(0, max(1, settings["maximum_evaluations"]))
         self.progress.setValue(0)
@@ -973,11 +1437,11 @@ class SequentialRefinementWorkspace(QWidget):
         thread = QThread(self)
         worker = SequentialRefinementWorker(
             method,
-            dataset.x,
-            observed,
-            structure,
+            record["input_snapshot"]["x"],
+            record["input_snapshot"]["observed_y"],
+            record["structure_snapshot"],
             settings,
-            regions,
+            record["excluded_regions"],
         )
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
@@ -997,15 +1461,20 @@ class SequentialRefinementWorkspace(QWidget):
         thread.start()
 
     def cancel_current_run(self):
+        self._queue_running = False
         if self._worker is not None:
             self._worker.request_cancel()
             self.cancel_button.setEnabled(False)
             self.progress_label.setText("Cancellation requested; waiting for a safe numerical checkpoint...")
 
+    @Slot(int, int, str)
     def _on_progress(self, done: int, total: int, message: str):
         self.progress.setRange(0, max(1, int(total)))
         self.progress.setValue(max(0, min(int(done), max(1, int(total)))))
-        self.progress_label.setText(f"{self._active_run_id} · {' '.join(str(message).split())}")
+        record = self._active_record() or {}
+        title = str(record.get("label") or self._active_run_id)
+        self.progress_label.setText(f"{title} [{self._active_run_id}] · {' '.join(str(message).split())}")
+        self.progress_label.setToolTip(self.progress_label.text())
 
     def _active_record(self) -> dict | None:
         if not self._active_run_id or not self._active_dataset_uid:
@@ -1015,6 +1484,7 @@ class SequentialRefinementWorkspace(QWidget):
             None,
         )
 
+    @Slot(object)
     def _on_finished(self, result):
         record = self._active_record()
         if record is not None:
@@ -1025,20 +1495,30 @@ class SequentialRefinementWorkspace(QWidget):
             result["cif_uid"] = record.get("cif_uid")
             result["cif_name"] = record.get("cif_name")
             result["cif_source"] = record.get("cif_source")
+            for key in ("step_id", "step_number", "step_name", "candidate_uid", "candidate_order", "candidate_label", "comparison_domain_signature"):
+                if key in record:
+                    result[key] = record[key]
             record["status"] = "Completed"
             record["completed_utc"] = _utc_now()
             record["result"] = result
-            self._selected_history_run_id = record["run_id"]
+            if result.get("success") is False:
+                record["convergence_warning"] = "Numerical run returned without convergence; rerun before advancing."
             self.progress_label.setText(
                 f"{record['run_id']} completed · Rwp {float(result.get('rwp_percent', 0.0)):.5g}% · "
                 f"{result.get('excluded_data_point_count', 0)} excluded point(s)."
             )
-            self._draw_record(record)
+            dataset = self._current_dataset()
+            if dataset is not None and str(dataset.uid) == self._active_dataset_uid:
+                self._selected_history_run_id = record["run_id"]
+                self._draw_record(record)
         self.progress.setValue(self.progress.maximum())
         self._populate_history(select_id=self._selected_history_run_id)
-        self._set_busy(False)
+        self._populate_candidates()
         self._mark_dirty()
+        if record is not None:
+            self.runCompleted.emit(str(record["run_id"]))
 
+    @Slot(str)
     def _on_failed(self, traceback_text: str):
         record = self._active_record()
         final = str(traceback_text).strip().splitlines()[-1] if traceback_text else "Unknown refinement failure"
@@ -1046,10 +1526,15 @@ class SequentialRefinementWorkspace(QWidget):
             record["status"] = "Failed"
             record["completed_utc"] = _utc_now()
             record["error"] = final
+            record["error_details"] = str(traceback_text)
+            if record.get("candidate_uid") and not record.get("continue_after_failure", True):
+                self._queue_running = False
         self.progress_label.setText(f"{self._active_run_id} failed · {final}")
         self._populate_history(select_id=self._active_run_id)
-        self._set_busy(False)
+        self._populate_candidates()
         self._mark_dirty()
+        if record is not None and record.get("candidate_uid"):
+            return  # Failed candidate is audited; no modal dialog blocks later jobs.
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Critical)
         box.setWindowTitle("Sequential refinement failed")
@@ -1057,22 +1542,28 @@ class SequentialRefinementWorkspace(QWidget):
         box.setDetailedText(str(traceback_text))
         box.exec()
 
+    @Slot()
     def _on_cancelled(self):
+        self._queue_running = False
         record = self._active_record()
         if record is not None:
             record["status"] = "Cancelled"
             record["completed_utc"] = _utc_now()
         self.progress_label.setText(f"{self._active_run_id} cancelled; earlier history is unchanged.")
         self._populate_history(select_id=self._active_run_id)
-        self._set_busy(False)
+        self._populate_candidates()
         self._mark_dirty()
 
+    @Slot()
     def _thread_finished(self):
         self._worker = None
         self._thread = None
         self._active_run_id = None
         self._active_dataset_uid = None
-        self._set_busy(False)
+        self._set_busy(self._queue_running)
+        self._populate_candidates()
+        if self._queue_running:
+            QTimer.singleShot(0, self._dispatch_next_queued)
 
     def _set_busy(self, busy: bool):
         for control in (
@@ -1085,9 +1576,14 @@ class SequentialRefinementWorkspace(QWidget):
             self.cif_combo,
             self.use_processed,
             self.use_gpu,
+            self.step_selector, self.step_name, self.queue_method, self.common_domain,
+            self.continue_after_failure, self.candidate_table, self.queue_checked_button,
+            self.start_queue_button, self.next_step_button, self.move_candidate_up, self.move_candidate_down,
+            self.discard_queue_button,
         ):
             control.setEnabled(not busy)
         self.cancel_button.setEnabled(busy)
+        self.pause_queue_button.setEnabled(self._queue_running)
 
     def _populate_history(self, select_id: str | None = None):
         rows = self._history()
@@ -1097,19 +1593,26 @@ class SequentialRefinementWorkspace(QWidget):
         for index, record in enumerate(rows):
             result = record.get("result") or {}
             values = (
-                record.get("run_id", ""),
-                record.get("method", ""),
+                "",
+                f"{record.get('step_id', 'Manual')} / {record.get('candidate_order', '-')}",
+                f"{record.get('run_id', '')}\n{record.get('label') or record.get('cif_name', '')}",
+                {"pawley": "PW", "lebail": "LB", "rietveld": "RT"}.get(record.get("method_key"), record.get("method", "")),
                 record.get("cif_name", ""),
                 "-" if result.get("rwp_percent") is None else f"{float(result['rwp_percent']):.5g}",
-                record.get("status", ""),
-                record.get("parent_run_id") or "root",
+                "Completed · not converged" if record.get("convergence_warning") else record.get("status", ""),
             )
             for column, value in enumerate(values):
                 item = QTableWidgetItem(str(value))
                 item.setData(Qt.UserRole, str(record.get("run_id")))
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setToolTip(f"{record.get('run_id')} · Parent: {record.get('parent_run_id') or 'original CIF'}\n{record.get('label') or ''}\n{record.get('method')} · CIF: {record.get('cif_name')}")
+                if column == 0 and can_advance(record):
+                    item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+                    item.setCheckState(Qt.Checked if record.get("run_id") in self.checked_runs_by_uid.get(str(record.get("dataset_uid")), []) else Qt.Unchecked)
                 self.history_table.setItem(index, column, item)
             if str(record.get("run_id")) == str(select_id or self._selected_history_run_id):
                 selected_row = index
+        self.history_table.resizeRowsToContents()
         if selected_row >= 0:
             self.history_table.selectRow(selected_row)
         self.history_table.blockSignals(False)
@@ -1210,13 +1713,21 @@ class SequentialRefinementWorkspace(QWidget):
             offset = float(np.min(observed)) - 0.18 * span
             sx, sy = self._finite_segments(x, difference + offset)
             self.plot.plot(sx, sy, connect="finite", pen=pg.mkPen(theme["gold_bright"], width=1.0), name="Difference")
-        dataset = self._current_dataset()
         regions = merge_regions(record.get("excluded_regions") or [])
-        if dataset is not None and regions:
+        source = record.get("input_snapshot") or {}
+        dataset = self._current_dataset()
+        if source:
+            source_x = np.asarray(source["x"], dtype=float)
+            source_y = np.asarray(source["observed_y"], dtype=float)
+        elif dataset is not None:  # Older project records predate frozen inputs.
+            source_x = np.asarray(dataset.x)
             source_y = dataset.y_processed if record.get("settings", {}).get("use_processed") and dataset.y_processed is not None else dataset.y_raw
-            excluded = ~inclusion_mask(dataset.x, regions)
+        else:
+            source_x, source_y = np.array([]), np.array([])
+        if regions and len(source_x):
+            excluded = ~inclusion_mask(source_x, regions)
             if np.any(excluded):
-                self.plot.plot(dataset.x[excluded], np.asarray(source_y)[excluded], pen=None, symbol="x", symbolSize=7, symbolPen=pg.mkPen(235, 87, 87, 230, width=1.4), name="Excluded measured points")
+                self.plot.plot(source_x[excluded], np.asarray(source_y)[excluded], pen=None, symbol="x", symbolSize=7, symbolPen=pg.mkPen(235, 87, 87, 230, width=1.4), name="Excluded measured points")
         reflections = [row for row in result.get("reflections", []) if row.get("fit_active", True)]
         centers = [position for row in reflections if (position := _position_of_reflection(row)) is not None]
         if centers and len(observed):
@@ -1235,6 +1746,7 @@ class SequentialRefinementWorkspace(QWidget):
             f"Viewing {record.get('run_id')} · {record.get('method')} · {record.get('cif_name')} · "
             f"Rwp {float(result.get('rwp_percent', 0.0)):.5g}%" + (f" · {label}" if label else "")
         )
+        self.progress_label.setToolTip(self.progress_label.text())
 
     def _fill_reflections(self, result: dict | None):
         rows = list((result or {}).get("reflections", []))
@@ -1258,19 +1770,24 @@ class SequentialRefinementWorkspace(QWidget):
         )
 
     def _draft_exclusions_changed(self):
+        if self._step_switching:
+            return
         self._mark_dirty()
         record = self._record_by_id(self._selected_history_run_id)
         self._draw_record(record) if record else self._draw_preview(self._current_dataset())
 
-    def export_full_history(self):
+    def export_full_history(self, *, target_path=None):
         dataset = self._current_dataset()
-        rows = self._history()
+        self._capture_step_draft()
+        rows = deepcopy(self._history())
         completed = [row for row in rows if row.get("status") == "Completed" and isinstance(row.get("result"), dict)]
-        if dataset is None or not completed:
-            QMessageBox.information(self, "No completed history", "Complete at least one refinement before exporting the history bundle.")
+        if dataset is None or not rows:
+            QMessageBox.information(self, "No history", "Queue or complete a refinement before exporting the history bundle.")
             return
         default = f"{safe_filename(dataset.name)}_sequential_refinement_history.zip"
-        filename, _ = QFileDialog.getSaveFileName(self, "Export complete sequential-refinement history", default, "ZIP archive (*.zip)")
+        filename = str(target_path) if target_path is not None else QFileDialog.getSaveFileName(
+            self, "Export complete sequential-refinement history", default, "ZIP archive (*.zip)"
+        )[0]
         if not filename:
             return
         target = Path(filename).with_suffix(".zip")
@@ -1285,6 +1802,12 @@ class SequentialRefinementWorkspace(QWidget):
                             "run_id": record.get("run_id"),
                             "parent_run_id": record.get("parent_run_id"),
                             "label": record.get("label"),
+                            "step_id": record.get("step_id"),
+                            "step_name": record.get("step_name"),
+                            "candidate_order": record.get("candidate_order"),
+                            "candidate_label": record.get("candidate_label"),
+                            "selected_for_next_step": record.get("run_id") in self.checked_runs_by_uid.get(str(dataset.uid), []),
+                            "comparison_domain_signature": record.get("comparison_domain_signature"),
                             "method": record.get("method"),
                             "status": record.get("status"),
                             "cif_name": record.get("cif_name"),
@@ -1298,6 +1821,13 @@ class SequentialRefinementWorkspace(QWidget):
                         }
                     )
                 write_table_txt(root / "refinement_history.txt", history_rows, title=f"Sequential refinement history - {dataset.name}")
+                plan_rows = []
+                for step in self.steps_by_uid.get(str(dataset.uid), []):
+                    for index, candidate in enumerate(step.get("candidates", [])):
+                        plan_rows.append({"step_id": step["step_id"], "step_name": step["name"],
+                                          "order": index + 1, "label": candidate["label"], "cif": candidate["cif_name"],
+                                          "enabled": candidate.get("enabled", True), "parent_run_id": candidate.get("parent_run_id")})
+                write_table_txt(root / "step_candidate_plan.txt", plan_rows, title="Step-wise candidate plan")
                 write_mapping_txt(
                     root / "workspace_manifest.txt",
                     {
@@ -1305,6 +1835,9 @@ class SequentialRefinementWorkspace(QWidget):
                         "dataset_uid": dataset.uid,
                         "run_attempt_count": len(rows),
                         "completed_run_count": len(completed),
+                        "pending_run_count": sum(record.get("status") == "Queued" for record in rows),
+                        "candidate_fit_convention": "One CIF per run; candidates are not fitted together and no fitted phase is subtracted.",
+                        "comparison_rule": "Direct R-factor comparison requires the same observation and fit-domain signature.",
                         "exported_utc": _utc_now(),
                         "scientific_boundary": (
                             "Excluded intervals are fit-domain masks. Inactive hkl rows are audit labels; "
@@ -1320,17 +1853,28 @@ class SequentialRefinementWorkspace(QWidget):
                     source = Path(str(structure.get("_sequential_refinement_source") or ""))
                     if source.is_file() and source.suffix.lower() == ".cif" and str(source.resolve()) not in copied_sources:
                         copied_sources.add(str(source.resolve()))
-                        (cif_dir / safe_filename(source.name)).write_bytes(source.read_bytes())
-                for record in completed:
+                        model_id = str(structure.get("_sequential_refinement_uid") or "CIF")
+                        (cif_dir / f"{safe_filename(model_id)}__{safe_filename(source.name)}").write_bytes(source.read_bytes())
+                for record in rows:
                     run_dir = root / safe_filename(str(record["run_id"]))
                     run_dir.mkdir()
-                    export_refinement_txt_bundle(
-                        run_dir / f"{safe_filename(str(record['run_id']))}_{safe_filename(str(record['method']))}.txt",
-                        record["result"],
-                        dataset_name=dataset.name,
-                        dataset_uid=dataset.uid,
-                        refinement_label=f"{record['method']} [{record['run_id']}]",
-                    )
+                    if record.get("status") == "Completed" and isinstance(record.get("result"), dict):
+                        export_refinement_txt_bundle(
+                            run_dir / f"{safe_filename(str(record['run_id']))}_{safe_filename(str(record['method']))}.txt",
+                            record["result"], dataset_name=dataset.name, dataset_uid=dataset.uid,
+                            refinement_label=f"{record['method']} [{record['run_id']}]",
+                        )
+                    input_snapshot = record.get("input_snapshot")
+                    if isinstance(input_snapshot, dict):
+                        write_columns_txt(run_dir / "frozen_input_pattern.txt", {
+                            "two_theta_deg": input_snapshot["x"], "intensity": input_snapshot["observed_y"]
+                        }, title=f"Frozen measurement input - {record['run_id']}")
+                    structure_snapshot = record.get("structure_snapshot")
+                    if isinstance(structure_snapshot, dict):
+                        from .project import _json_default
+                        (run_dir / "frozen_model_snapshot.json").write_text(
+                            json.dumps(structure_snapshot, default=_json_default, indent=2), encoding="utf-8"
+                        )
                     write_table_txt(
                         run_dir / "excluded_regions.txt",
                         record.get("excluded_regions") or [],
@@ -1339,7 +1883,7 @@ class SequentialRefinementWorkspace(QWidget):
                     )
                     write_mapping_txt(
                         run_dir / "run_provenance.txt",
-                        {key: value for key, value in record.items() if key != "result"},
+                        {key: value for key, value in record.items() if key not in {"result", "input_snapshot", "structure_snapshot"}},
                         title=f"Run provenance - {record['run_id']}",
                     )
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -1351,6 +1895,7 @@ class SequentialRefinementWorkspace(QWidget):
             QMessageBox.critical(self, "Full history export failed", str(exc))
             return
         self.progress_label.setText(f"Exported complete refinement history: {target}")
+        return target
 
     def _mark_dirty(self):
         callback = getattr(self.main_window, "_mark_project_dirty", None)
@@ -1358,7 +1903,7 @@ class SequentialRefinementWorkspace(QWidget):
             callback()
 
     def is_running(self) -> bool:
-        return bool(self._thread is not None and self._thread.isRunning())
+        return self._thread is not None or self._queue_running
 
     def apply_theme(self, theme_name: str):
         theme = THEMES.get(theme_name, THEMES[DEFAULT_THEME_NAME])
@@ -1368,14 +1913,16 @@ class SequentialRefinementWorkspace(QWidget):
         self.plot.getAxis("left").setTextPen(pg.mkPen(theme["plot_axis"]))
 
     def get_state(self):
+        self._capture_step_draft()
         histories = deepcopy(self.history_by_uid)
         for rows in histories.values():
             for record in rows:
                 if record.get("status") == "Running":
                     record["status"] = "Interrupted snapshot"
                     record["error"] = "The project was saved while this numerical run was still active. Start a new child run after reopening."
+        histories, steps, snapshot_pool = pack_snapshots(histories, self.steps_by_uid)
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "structures": deepcopy(self.structures),
             "history_by_uid": histories,
             "next_run_counter": int(self.next_run_counter),
@@ -1384,14 +1931,29 @@ class SequentialRefinementWorkspace(QWidget):
             "draft_exclusions": self.exclusion_editor.get_state(),
             "settings": self._settings(),
             "run_label": self.run_label.text(),
+            "steps_by_uid": steps,
+            "queue_snapshot_pool": snapshot_pool,
+            "selected_step_by_uid": deepcopy(self.selected_step_by_uid),
+            "checked_runs_by_uid": deepcopy(self.checked_runs_by_uid),
+            "queue_scope": list(self._queue_scope) if self._queue_scope else None,
+            "queue_resume_policy": "Paused on open; pending frozen jobs resume only after explicit Start.",
         }
 
     def set_state(self, state):
         state = state or {}
+        self._queue_running = False
+        if self._worker is not None:
+            self._worker.request_cancel()
         structures = state.get("structures")
         self.structures = deepcopy(structures) if isinstance(structures, list) else []
         histories = state.get("history_by_uid")
         self.history_by_uid = deepcopy(histories) if isinstance(histories, dict) else {}
+        self.steps_by_uid = deepcopy(state.get("steps_by_uid")) if isinstance(state.get("steps_by_uid"), dict) else {}
+        unpack_snapshots(self.history_by_uid, self.steps_by_uid, state.get("queue_snapshot_pool") or {})
+        self.selected_step_by_uid = deepcopy(state.get("selected_step_by_uid")) if isinstance(state.get("selected_step_by_uid"), dict) else {}
+        self.checked_runs_by_uid = deepcopy(state.get("checked_runs_by_uid")) if isinstance(state.get("checked_runs_by_uid"), dict) else {}
+        scope = state.get("queue_scope")
+        self._queue_scope = tuple(str(value) for value in scope) if isinstance(scope, (list, tuple)) and len(scope) == 2 else None
         for rows in self.history_by_uid.values():
             for record in rows:
                 if record.get("status") == "Running":
@@ -1401,11 +1963,21 @@ class SequentialRefinementWorkspace(QWidget):
         except (TypeError, ValueError):
             self.next_run_counter = 1
         self._selected_history_run_id = state.get("selected_history_run_id")
-        self.exclusion_editor.set_state(state.get("draft_exclusions"))
-        self._refresh_cif_library(select_uid=state.get("active_cif_uid"))
-        self.refresh_for_selected_dataset()
+        # Loading a project is not a user edit to the restored step draft.
+        # In particular, do not capture the previous dataset's controls into
+        # the just-restored step when the active dataset changes on open.
+        self._step_switching = True
+        try:
+            self.exclusion_editor.set_state(state.get("draft_exclusions"))
+            self._refresh_cif_library(select_uid=state.get("active_cif_uid"))
+            self.refresh_for_selected_dataset()
+        finally:
+            self._step_switching = False
+        self._apply_step_controls()
         # Dataset refresh establishes valid control ranges; saved values are
         # restored afterwards so reopening an AFZ does not silently expand a
         # deliberately restricted refinement interval.
         self._set_settings(state.get("settings") or {})
         self.run_label.setText(str(state.get("run_label") or ""))
+        self._set_busy(self._thread is not None)
+        self._populate_candidates()

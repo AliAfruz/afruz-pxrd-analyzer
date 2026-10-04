@@ -3,6 +3,35 @@
 All notable user-visible changes are recorded here. Versions follow semantic
 versioning where practical.
 
+## [23.3.0] — 2026-10-04 (local development)
+
+### Added
+
+- A scrollable **Step-wise queue** tab inside the existing exclusion laboratory,
+  with checked CIF candidates, editable labels, explicit order and a shared
+  Pawley, Le Bail or Rietveld method per queued batch.
+- Serial background execution, pause-after-current, cooperative cancellation,
+  audited failures and optional continuation after a failed candidate.
+- History checkboxes for selecting completed, converged candidates for the
+  next step. Follow-up runs preserve parent IDs and initialize from valid
+  refined cells/profile parameters without altering fixed CIF atom sites.
+- Frozen measurement/model/settings/mask snapshots, stable IDs, matched-domain
+  signatures, AFZ pending-job resume and deduplicated large model snapshots.
+- Full-history ZIP export now includes the step plan, every attempted run's
+  provenance, frozen input and model, and clean completed-refinement TXT data.
+- Wrapped reflection summaries and bounded progress text so long labels do
+  not squeeze the history panel; history IDs remain visible beside selection.
+
+### Scientific and release boundary
+
+- Exactly one CIF is fitted per run. Candidate selection is not a simultaneous
+  multiphase fit, quantitative phase analysis or subtraction of a fitted phase.
+- Shared ranges/exclusions are the default. Parent-specific masks can be
+  inherited deliberately; R factors from differing fit domains must not be
+  directly ranked as if they used identical observations.
+- Original numerical engines, production refiners, Crystal Studio and the
+  restored overall interface are unchanged. No GitHub/Zenodo publication.
+
 ## [23.2.0] — 2026-10-04 (local development)
 
 ### Added

@@ -1,6 +1,6 @@
 # Phase-Exclusion Investigation and CIF PXRD Simulation
 
-Release: 23.2.0 local development build
+Release: 23.3.0 local development build
 
 ## Purpose
 
@@ -56,6 +56,15 @@ new child refinement continue from any completed record. A numerical optimizer
 that was interrupted while running is recorded as interrupted and is restarted
 as a new ID; its in-memory iteration cannot be resumed safely.
 
+## Step-wise CIF candidate queue
+
+The **Step-wise queue** tab extends the same laboratory with automatic serial
+candidate runs and result selection for follow-up steps. Each run fits just
+one CIF, as opposed to fitting active CIFs together. See
+[STEPWISE_CIF_QUEUE.md](STEPWISE_CIF_QUEUE.md) for the complete procedure,
+pause/reopen behavior and export contents. Established single-run buttons and
+the independent investigation windows remain available.
+
 ## Using excluded regions
 
 1. Select the experimental dataset and open **Refinement & Quantification ->
@@ -73,7 +82,8 @@ as a new ID; its in-memory iteration cannot be resumed safely.
    profile and a separate excluded-region audit table.
 
 Overlapping or touching intervals are merged deterministically. At least 50
-measured points must remain. The result records original, included, and
+measured points must remain for Pawley/Le Bail, and 80 for the laboratory's
+Rietveld runs, inside the selected fit range. The result records original, included, and
 excluded point counts and states that calculated structural reflections inside
 an excluded region were not deleted from the model.
 
