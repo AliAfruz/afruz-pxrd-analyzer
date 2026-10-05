@@ -1,6 +1,6 @@
 # Step-wise CIF candidate comparison
 
-Local version 23.3.1. No GitHub or Zenodo update is included in this build.
+Local version 23.3.2. No GitHub or Zenodo update is included in this build.
 
 ## Open and run Step 1
 
@@ -54,6 +54,34 @@ shared. A new domain signature records the actual observation, range, weighting
 and numeric masks; matching signatures are necessary, not sufficient, for
 meaningful R-factor comparison. Also review model complexity, profile/background
 assumptions, residuals and chemical plausibility.
+
+## View the selected crystal
+
+- Select a completed row in the right **History** table, then click **Open
+  Crystal Studio** directly below it. The window title and scene provenance
+  include that run's unique ID. It uses the saved fitted unit cell and frozen
+  input atoms for that run, even if the active CIF or its source file changes.
+- Rietveld, Pawley and Le Bail results are supported. Fractional coordinates
+  and occupancies remain fixed to the CIF. Pawley/Le Bail views are explicitly
+  cell-only structural visualizations, not independently determined atom positions.
+  Non-converged completed runs remain inspectable with a warning, not eligible
+  for next-step seeding. Missing atomic/cell snapshots produce an explanation
+  rather than a guessed replacement model.
+- Before fitting, select a candidate row under **Steps** and click **Preview
+  candidate crystal**. This separately labelled preview uses its initial CIF
+  cell, or its selected parent's fitted cell for a later step. It is not a new
+  refinement result. Changing a selection never changes an already-open view.
+- The existing Crystal Studio provides CPU figures, **GPU 3D + fast export**,
+  smart styles and single-pore views from the same frozen model. Its scientific
+  validation/export gates and pore-estimate limitations still apply; excluded
+  XRD zones do not remove atoms from the crystal.
+- Model validation/preparation runs in the background. **Preparing crystal…**
+  appears while a large model is being prepared; the XRD workspace stays usable.
+  The requested run/candidate is frozen at the click, so later selection changes
+  cannot redirect the pending crystal view.
+- After reopening a saved AFZ project, select its completed History row and
+  open the crystal again. No running computation or original CIF file is needed
+  when the required snapshots are present. Crystal windows do not launch on load.
 
 ## Pause, change plans and save
 

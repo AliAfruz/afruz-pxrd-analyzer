@@ -1,4 +1,4 @@
-# Afruz PXRD Analyzer 23.3.1
+# Afruz PXRD Analyzer 23.3.2
 
 [![Windows tests](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml/badge.svg)](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23119992.svg)](https://doi.org/10.5281/zenodo.23119992)
@@ -49,6 +49,12 @@ scrolling controls on the left, result history on the right and always-visible
 queue actions. Open **Sequential refinement & exclusions → Open Refinement
 Studio**. It retains the same project-owned calculation/state objects and AFZ
 data; closing the Studio hides it without discarding jobs or results.
+
+Local patch 23.3.2 adds **Open Crystal Studio** below the Studio's History table:
+select a completed run to render its saved fitted cell and frozen CIF atoms in
+the existing CPU/GPU/single-pore viewer. **Preview candidate crystal** under
+Steps separately shows an initial or parent-seeded candidate, labelled as a
+preview rather than a new fit. Pawley/Le Bail views do not imply atomic refinement.
 The complete release verification is recorded in
 [`RELEASE_AUDIT.md`](RELEASE_AUDIT.md), and fixture licensing/provenance is
 tracked in [`DATA_PROVENANCE.md`](DATA_PROVENANCE.md).

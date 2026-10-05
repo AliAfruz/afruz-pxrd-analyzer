@@ -14,7 +14,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import numpy as np
 import pyqtgraph as pg
 
-from PySide6.QtCore import QObject, QThread, Qt, QTimer, Signal, Slot
+from PySide6.QtCore import QObject, QRunnable, QThread, QThreadPool, Qt, QTimer, Signal, Slot
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -42,6 +42,7 @@ from PySide6.QtWidgets import (
 
 from .context_copy import CopyablePlotWidget, install_label_copy_menu, install_table_copy_menu
 from .candidate_queue import can_advance, candidate_run_label, comparison_domain_signature, pack_snapshots, parent_seed, unpack_snapshots, warm_start_settings
+from .refinement_crystal import model_from_candidate, models_from_refinement_record
 from .crystallography import calculate_powder_pattern, load_cif
 from .exclusion_regions import ExclusionRegion, attach_exclusion_audit, filter_arrays, inclusion_mask, merge_regions
 from .gpu_backend import cuda_status
@@ -472,6 +473,29 @@ class SequentialExclusionEditor(QGroupBox):
         self._populate()
 
 
+class _CrystalModelSignals(QObject):
+    finished = Signal(object, str)
+
+
+class _CrystalModelJob(QRunnable):
+    """Validate potentially huge frozen MOF models without blocking Qt."""
+    def __init__(self, kind, payload):
+        super().__init__()
+        self.signals = _CrystalModelSignals()
+        self.kind, self.payload = kind, deepcopy(payload)
+
+    def run(self):
+        try:
+            if self.kind == "result":
+                models = models_from_refinement_record(self.payload)
+            else:
+                structure, candidate, parent, step_id = self.payload
+                models = [model_from_candidate(structure, candidate, parent, step_id=step_id)]
+            self.signals.finished.emit(models, "")
+        except Exception as exc:
+            self.signals.finished.emit(None, str(exc))
+
+
 class SequentialRefinementWorkspace(QWidget):
     """Central, lineage-aware refinement laboratory built on validated engines."""
 
@@ -496,6 +520,9 @@ class SequentialRefinementWorkspace(QWidget):
         self._selected_history_run_id: str | None = None
         self._last_dataset_uid: str | None = None
         self._plot_items: list[object] = []
+        self._crystal_dialogs: list[object] = []
+        self._crystal_model_job = None
+        self._crystal_model_title = ""
         self.current_theme_name = DEFAULT_THEME_NAME
         self._build_ui()
         self.refresh_for_selected_dataset()
@@ -635,6 +662,7 @@ class SequentialRefinementWorkspace(QWidget):
         self.history_table.itemChanged.connect(self._history_item_changed)
         self.continue_button.clicked.connect(self.continue_from_selected)
         self.show_latest_button.clicked.connect(self.select_latest_run)
+        self.crystal_studio_button.clicked.connect(self.open_crystal_studio)
         self.exclusion_editor.changed.connect(self._draft_exclusions_changed)
         self.plot.scene().sigMouseClicked.connect(self._plot_clicked)
 
@@ -719,6 +747,10 @@ class SequentialRefinementWorkspace(QWidget):
         order_row.addWidget(self.move_candidate_up)
         order_row.addWidget(self.move_candidate_down)
         layout.addLayout(order_row)
+        self.candidate_crystal_button = QPushButton("Preview candidate crystal")
+        self.candidate_crystal_button.setToolTip("Preview the selected row's initial CIF / parent-seeded model, not a new refinement result.")
+        self.candidate_crystal_button.setEnabled(False)
+        layout.addWidget(self.candidate_crystal_button)
         layout.addWidget(self.discard_queue_button)
         for index, button in enumerate((self.queue_checked_button, self.start_queue_button,
                                         self.pause_queue_button, self.next_step_button)):
@@ -743,6 +775,8 @@ class SequentialRefinementWorkspace(QWidget):
         self.step_selector.currentIndexChanged.connect(self._step_selected)
         self.step_name.editingFinished.connect(self._step_name_changed)
         self.candidate_table.itemChanged.connect(self._candidate_item_changed)
+        self.candidate_table.itemSelectionChanged.connect(self._update_crystal_actions)
+        self.candidate_crystal_button.clicked.connect(self.open_candidate_crystal_studio)
         self.queue_checked_button.clicked.connect(self.queue_checked_candidates)
         self.start_queue_button.clicked.connect(self.start_queue)
         self.pause_queue_button.clicked.connect(self.pause_queue)
@@ -835,6 +869,7 @@ class SequentialRefinementWorkspace(QWidget):
                     item.setFlags(item.flags() | Qt.ItemIsEditable)
                 self.candidate_table.setItem(index, column, item)
         self.candidate_table.blockSignals(False)
+        self._update_crystal_actions()
         if step:
             self.step_name.setText(str(step["name"]))
         pending = sum(row.get("status") == "Queued" and row.get("step_id") == (step or {}).get("step_id") for row in self._history())
@@ -1200,8 +1235,13 @@ class SequentialRefinementWorkspace(QWidget):
         layout.addWidget(self.history_summary)
         self.continue_button = QPushButton("Continue from selected run")
         self.show_latest_button = QPushButton("Show latest completed run")
+        self.crystal_studio_button = QPushButton("Open Crystal Studio")
+        self.crystal_studio_button.setObjectName("primaryButton")
+        self.crystal_studio_button.setEnabled(False)
+        self.crystal_studio_button.setToolTip("Select a completed History row to view that run's saved fitted crystal model.")
         layout.addWidget(self.continue_button)
         layout.addWidget(self.show_latest_button)
+        layout.addWidget(self.crystal_studio_button)
         return group
 
     def _settings(self) -> dict:
@@ -1387,6 +1427,7 @@ class SequentialRefinementWorkspace(QWidget):
             self.history_table.setRowCount(0)
             self._populate_steps()
             self._draw_preview(None)
+            self._update_crystal_actions()
             return
         dataset_changed = str(dataset.uid) != str(self._last_dataset_uid or "")
         self._last_dataset_uid = str(dataset.uid)
@@ -1405,6 +1446,7 @@ class SequentialRefinementWorkspace(QWidget):
         if selected is None and dataset_changed:
             self._selected_history_run_id = None
         self._draw_record(selected) if selected else self._draw_preview(dataset)
+        self._update_crystal_actions()
 
     def _history(self, uid: str | None = None) -> list[dict]:
         dataset = self._current_dataset()
@@ -1698,6 +1740,7 @@ class SequentialRefinementWorkspace(QWidget):
             if rows
             else "No refinement history for this dataset. The first run becomes the root of a reproducible lineage."
         )
+        self._update_crystal_actions()
 
     def _history_selection_changed(self):
         row = self.history_table.currentRow()
@@ -1708,6 +1751,94 @@ class SequentialRefinementWorkspace(QWidget):
         record = self._record_by_id(self._selected_history_run_id)
         if record is not None:
             self._draw_record(record)
+        self._update_crystal_actions()
+
+    def _selected_crystal_candidate(self):
+        step = self._current_step() or {}
+        row = self.candidate_table.currentRow()
+        item = self.candidate_table.item(row, 0) if row >= 0 else None
+        uid = item.data(Qt.UserRole) if item is not None and self.candidate_table.selectedItems() else None
+        return next((candidate for candidate in step.get("candidates", []) if candidate.get("candidate_uid") == uid), None)
+
+    def _update_crystal_actions(self):
+        preparing = self._crystal_model_job is not None
+        if hasattr(self, "crystal_studio_button"):
+            record = self._record_by_id(self._selected_history_run_id)
+            ready = bool(record and record.get("status") == "Completed" and isinstance(record.get("result"), dict))
+            self.crystal_studio_button.setEnabled(ready and not preparing)
+            self.crystal_studio_button.setText("Preparing crystal…" if preparing else "Open Crystal Studio")
+            self.crystal_studio_button.setToolTip(
+                f"Open {record['run_id']} · {record.get('label') or record.get('cif_name', '')}. Uses its frozen atoms and saved fitted cell, not the active CIF."
+                if ready else "Select a completed History row to view that run's saved fitted crystal model."
+            )
+        if hasattr(self, "candidate_crystal_button"):
+            self.candidate_crystal_button.setEnabled(self._selected_crystal_candidate() is not None and not preparing)
+            self.candidate_crystal_button.setText("Preparing crystal…" if preparing else "Preview candidate crystal")
+
+    def _prepare_crystal_models(self, kind, payload, title):
+        if self._crystal_model_job is not None:
+            return None
+        job = _CrystalModelJob(kind, payload)
+        self._crystal_model_job = job
+        self._crystal_model_title = str(title)
+        job.signals.finished.connect(self._crystal_models_ready)
+        self._update_crystal_actions()
+        QThreadPool.globalInstance().start(job)
+        return job
+
+    @Slot(object, str)
+    def _crystal_models_ready(self, models, error):
+        title = self._crystal_model_title
+        self._crystal_model_job = None
+        self._update_crystal_actions()
+        if error:
+            QMessageBox.warning(self, "Crystal model unavailable", error)
+            return
+        self._show_crystal_models(models, title)
+
+    def _show_crystal_models(self, models, title):
+        from .crystal_studio import CrystalStudioDialog
+
+        studio = CrystalStudioDialog(parent=self, models=models)
+        studio.setWindowTitle(f"Crystal Studio — {title}")
+        self._crystal_dialogs.append(studio)
+        studio.destroyed.connect(lambda *_args, owned=studio: (
+            self._crystal_dialogs.remove(owned) if owned in self._crystal_dialogs else None
+        ))
+        cinematic_ui = getattr(self.main_window, "cinematic_ui", None)
+        if cinematic_ui is not None:
+            cinematic_ui.decorate(studio)
+        studio.show()
+        return studio
+
+    def open_crystal_studio(self):
+        record = self._record_by_id(self._selected_history_run_id)
+        try:
+            if record is None:
+                raise ValueError("Select a completed run in History first.")
+            if record.get("status") != "Completed" or not isinstance(record.get("result"), dict):
+                raise ValueError("Select a completed run in History first.")
+        except (ValueError, TypeError, KeyError) as exc:
+            QMessageBox.warning(self, "Crystal model unavailable", str(exc))
+            return None
+        return self._prepare_crystal_models("result", record, f"{record['run_id']} · {record.get('cif_name', 'Candidate')}")
+
+    def open_candidate_crystal_studio(self):
+        candidate = self._selected_crystal_candidate()
+        try:
+            if candidate is None:
+                raise ValueError("Select a candidate row under Steps first.")
+            structure = candidate.get("structure_snapshot") or next(
+                (row for row in self.structures if row.get("_sequential_refinement_uid") == candidate.get("cif_uid")), None
+            )
+            if structure is None:
+                raise ValueError("This candidate's input CIF model is unavailable. Reimport it first.")
+            payload = (structure, candidate, self._record_by_id(candidate.get("parent_run_id")),
+                       (self._current_step() or {}).get("step_id"))
+        except (ValueError, TypeError, KeyError) as exc:
+            QMessageBox.warning(self, "Candidate crystal unavailable", str(exc))
+            return None
+        return self._prepare_crystal_models("candidate", payload, f"Candidate preview · {candidate.get('label', 'CIF')}")
 
     def continue_from_selected(self):
         record = self._record_by_id(self._selected_history_run_id)

@@ -3,6 +3,23 @@
 All notable user-visible changes are recorded here. Versions follow semantic
 versioning where practical.
 
+## [23.3.2] — 2026-10-05 (local development)
+
+### Added
+
+- **Open Crystal Studio** in the detached Refinement Studio's History panel,
+  using the selected completed run's saved fitted cell and frozen atomic model.
+  Run ID, method, lineage, fit domain and diagnostics accompany scene provenance.
+- Pawley and Le Bail cell-only views explicitly retain fixed CIF sites. Completed
+  non-converged fits carry warnings; missing snapshots never fall back to a live CIF.
+- A separate **Preview candidate crystal** action under Steps for initial or
+  parent-seeded models, clearly distinguished from completed refinement results.
+- Background crystal model preparation with a visible busy indicator, protecting
+  the XRD workspace from long validation of large framework snapshots.
+- Existing Crystal Studio CPU/GPU/pore rendering, validation and export are
+  reused unchanged. Numerical engines and original refinement workspaces are
+  unchanged. This is a local update only; no GitHub or Zenodo release.
+
 ## [23.3.1] — 2026-10-04 (local development)
 
 ### Changed

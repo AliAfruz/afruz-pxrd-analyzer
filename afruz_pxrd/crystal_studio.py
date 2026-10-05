@@ -254,7 +254,11 @@ class _CrystalPreview(QLabel):
 
 
 class CrystalStudioDialog(QDialog):
-    def __init__(self, result=None, parent=None):
+    def __init__(self, result=None, parent=None, *, models=None):
+        # Prevalidated models allow other workspaces to use the exact same
+        # CPU/GPU/pore pipeline without disguising a CIF preview as Rietveld.
+        if result is not None and models is not None:
+            raise ValueError("Provide a refinement result or frozen crystal models, not both.")
         super().__init__(parent)
         self.setWindowTitle("Crystal Studio — Afruz PXRD")
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -278,7 +282,7 @@ class CrystalStudioDialog(QDialog):
         self._build_ui()
         notice = ""
         try:
-            self.models = models_from_result(result)
+            self.models = deepcopy(models) if models is not None else models_from_result(result)
         except ValueError as exc:
             notice = str(exc)
         self._populate_models()
