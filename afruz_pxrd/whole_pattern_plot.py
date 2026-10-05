@@ -97,6 +97,8 @@ class WholePatternPlotWidget(QWidget):
             name="Background",
         )
 
+        if result.get("background_seed_y") is not None:
+            self.plot.plot(x, result["background_seed_y"], pen=pg.mkPen(theme["gold_bright"], width=1, style=Qt.DotLine), name="Chosen starting background")
         span = max(float(np.ptp(observed)), 1.0)
         difference_offset = float(np.min(observed)) - 0.18 * span
         self.plot.plot(

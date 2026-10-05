@@ -56,6 +56,8 @@ from .rietveld_refinement import (
     validate_phase_specs_for_refinement,
 )
 from .rietveld_worker import RietveldWorker
+from .refinement_background import SEED_STATISTICS_NOTE, background_kwargs, selected_background
+from .refinement_background_widget import RefinementBackgroundControl
 from .widgets import NoWheelComboBox, NoWheelDoubleSpinBox, NoWheelSpinBox
 
 
@@ -520,6 +522,9 @@ class RietveldRefinementWidget(QWidget):
         form.addRow("2θ maximum", self.range_max)
         form.addRow("Reflection cutoff (%)", self.cutoff)
         form.addRow("Background order", self.background_order)
+        self.background_control = RefinementBackgroundControl(self.main_window)
+        self.background_control.changed.connect(self._update_statistics_status)
+        form.addRow("Chosen background", self.background_control)
         form.addRow("Weighting", self.weighting)
         form.addRow("Robust loss", self.loss)
         form.addRow(self.refine_zero)
@@ -1034,6 +1039,7 @@ class RietveldRefinementWidget(QWidget):
             self.import_peaks_from_main_list()
 
     def refresh_for_selected_dataset(self):
+        self.background_control.refresh()
         dataset = self.main_window.selected_dataset()
         if dataset is None:
             return
@@ -1078,7 +1084,8 @@ class RietveldRefinementWidget(QWidget):
         return None
 
     def _selected_input_and_statistics(self, dataset):
-        use_processed = self.use_processed.isChecked() and dataset.y_processed is not None
+        chosen_background = selected_background(dataset)
+        use_processed = self.use_processed.isChecked() and dataset.y_processed is not None and chosen_background is None
         observed = np.asarray(
             dataset.y_processed if use_processed else dataset.y_raw,
             dtype=float,
@@ -1096,6 +1103,10 @@ class RietveldRefinementWidget(QWidget):
         statistical["selected_input_label"] = (
             "processed pattern" if use_processed else "raw measured pattern"
         )
+        if chosen_background is not None:
+            statistical["selected_input_label"] += " + chosen background/correction (processed input bypassed)"
+            statistical["statistics_expected_valid"] = False
+            statistical["statistics_note"] += " " + SEED_STATISTICS_NOTE
         return observed, statistical
 
     def _update_statistics_status(self, *_args):
@@ -1197,6 +1208,7 @@ class RietveldRefinementWidget(QWidget):
 
         try:
             y, statistical = self._selected_input_and_statistics(dataset)
+            chosen_background_kwargs = background_kwargs(dataset)
         except Exception as exc:
             QMessageBox.warning(self, "Invalid intensity statistics", str(exc))
             return
@@ -1256,6 +1268,7 @@ class RietveldRefinementWidget(QWidget):
             "use_gpu": self.use_cuda.isChecked(),
         }
         thread = QThread(self)
+        settings.update(chosen_background_kwargs)
         worker = RietveldWorker(dataset.x.copy(), y.copy(), phase_specs, settings)
         worker.moveToThread(thread)
         thread.started.connect(worker.run)

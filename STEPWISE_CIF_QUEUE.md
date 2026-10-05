@@ -1,6 +1,6 @@
 # Step-wise CIF candidate comparison
 
-Local version 23.3.2. No GitHub or Zenodo update is included in this build.
+Local version 23.4.0. No GitHub or Zenodo update is included in this build.
 
 ## Open and run Step 1
 
@@ -19,6 +19,8 @@ Local version 23.3.2. No GitHub or Zenodo update is included in this build.
    **Settings**; choose **Use GPU where supported** if wanted.
 5. In **Zones**, label any regions to omit. Leave **Shared range and exclusions**
    checked under Steps for a matched-domain comparison.
+   Optionally use the header's **Background…** button to choose a shared starting
+   curve plus fitted correction before queuing; see [Background engine](REFINEMENT_BACKGROUND.md).
 6. Click **Queue selected**, then **Start / resume**. Only one numerical worker
    runs at a time. These four run/step buttons are pinned outside the scroller.
 

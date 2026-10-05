@@ -32,6 +32,7 @@ from .structure_validation import (
     validate_crystal_structure,
 )
 from .crystal_scene import structure_snapshot
+from .refinement_background import SeedBackground
 from .instrument_physics import (
     CalibrationRangeError,
     calibration_prior_residual,
@@ -1064,6 +1065,7 @@ def simulate_rietveld_pattern(
     *,
     wavelength_angstrom: float = 1.5406,
     background_coefficients: list[float] | None = None,
+    background_seed_y: np.ndarray | None = None,
     zero_shift_deg: float = 0.0,
     caglioti_u: float = 0.005,
     caglioti_v: float = 0.0,
@@ -1073,6 +1075,7 @@ def simulate_rietveld_pattern(
     lorentzian_x: float = 0.0,
     lorentzian_y: float = 0.0,
     axial_asymmetry: float = 0.0,
+    axial_sh_over_l: float = 0.0,
     intensity_cutoff_percent: float = 0.2,
     k_alpha2_enabled: bool = False,
     k_alpha2_wavelength_angstrom: float = 1.54439,
@@ -1098,6 +1101,7 @@ def simulate_rietveld_pattern(
         "x": max(float(lorentzian_x), 0.0),
         "y": max(float(lorentzian_y), 0.0),
         "axial_asymmetry": float(np.clip(axial_asymmetry, -0.75, 0.75)),
+        "axial_sh_over_l": max(float(axial_sh_over_l), 0.0),
         "cells": {phase["phase_index"]: deepcopy(phase["initial_cell"]) for phase in phases},
         "delta_biso": {phase["phase_index"]: 0.0 for phase in phases},
         "preferred_r": {phase["phase_index"]: phase["initial_preferred_r"] for phase in phases},
@@ -1116,6 +1120,8 @@ def simulate_rietveld_pattern(
         calculated += float(scale) * basis
     coefficients = list(background_coefficients or [0.0])
     calculated += _background_basis(x, len(coefficients) - 1) @ np.asarray(coefficients, dtype=float)
+    if background_seed_y is not None:
+        calculated += SeedBackground(x, background_seed_y).values(x)
     return calculated
 
 
@@ -1129,6 +1135,8 @@ def refine_rietveld(
     two_theta_max: float | None = None,
     intensity_cutoff_percent: float = 0.2,
     background_order: int = 3,
+    background_seed_y: np.ndarray | None = None,
+    background_seed_provenance: dict | None = None,
     weighting: str = "Poisson-like",
     refine_zero_shift: bool = True,
     initial_zero_shift: float = 0.0,
@@ -1187,6 +1195,7 @@ def refine_rietveld(
     )
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
+    seed_background = SeedBackground(x, background_seed_y, background_seed_provenance)
     if x.ndim != 1 or y.ndim != 1 or len(x) != len(y):
         raise RietveldError("X and Y must be one-dimensional arrays of equal length.")
     if len(x) < 80:
@@ -1281,6 +1290,7 @@ def refine_rietveld(
     except ValueError as exc:
         raise RietveldError(str(exc)) from exc
 
+    full_weight_model = seed_background.weight_model(full_weight_model)
     validation_stride = int(validation_stride)
     if validation_stride and validation_stride < 3:
         raise RietveldError("Validation stride must be zero (disabled) or at least three.")
@@ -1379,6 +1389,7 @@ def refine_rietveld(
             reflection_rows.extend(rows)
             warnings.extend(local_warnings)
         background = _background_basis(x_values, background_order)
+        background_offset = seed_background.offset(x_values)
         weights = np.asarray(sqrt_weights, dtype=float)
         if weights.shape != y_values.shape:
             raise RietveldError("Refinement weights no longer match the observed pattern.")
@@ -1388,15 +1399,15 @@ def refine_rietveld(
             else np.ones_like(weights)
         )
         scales, background_coefficients, phase_profiles, calculated, linear_covariance = _solve_linear(
-            phase_bases, background, y_values, scale_weights
+            phase_bases, background, y_values - background_offset, scale_weights
         )
         return {
             "state": state,
             "scales": scales,
             "background_coefficients": background_coefficients,
             "phase_profiles": phase_profiles,
-            "background": background @ background_coefficients,
-            "calculated": calculated,
+            "background": background_offset + background @ background_coefficients,
+            "calculated": calculated + background_offset,
             "weights": weights,
             "scale_weights": scale_weights,
             "linear_covariance": linear_covariance,
@@ -1553,6 +1564,12 @@ def refine_rietveld(
         "rmse": None,
     }
     if validation_indices.size:
+        if seed_background.seed is not None and seed_background.provenance.get("independent_known_background") is not True:
+            cross_validation.update(
+                is_independent_validation=False,
+                background_seed_uses_validation_observations=True,
+                background_note="The chosen baseline used the full raw pattern; held-out diagnostics are conditional, not independent validation.",
+            )
         training_solution = solve(
             refined_values,
             x_fit,
@@ -1581,6 +1598,7 @@ def refine_rietveld(
             _background_basis(x_full, background_order)
             @ training_solution["background_coefficients"]
         )
+        validation_calculated += seed_background.offset(x_full)
         held_observed = y_full[validation_indices]
         held_calculated = validation_calculated[validation_indices]
         held_weights = full_weight_model.fit_sqrt_weights[validation_indices]
@@ -1825,6 +1843,8 @@ def refine_rietveld(
             "Gaussian prior to shared position/profile parameters."
         )
     if cross_validation["enabled"]:
+        if cross_validation.get("background_note"):
+            warnings.append(cross_validation["background_note"])
         warnings.append(
             f"Predictive validation withheld every {validation_stride}th point "
             f"({cross_validation['validation_point_count']} points) from nonlinear "
@@ -1897,6 +1917,7 @@ def refine_rietveld(
         "scale_covariance": scale_covariance.tolist(),
         "reflections": final["reflections"],
         "background_coefficients": final["background_coefficients"].tolist(),
+        **seed_background.result_fields(x_full, final["background_coefficients"], final["background"]),
         "observed_x": x_full.tolist(),
         "observed_y": y_full.tolist(),
         "calculated_y": final["calculated"].tolist(),

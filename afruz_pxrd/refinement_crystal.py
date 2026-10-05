@@ -60,6 +60,7 @@ def models_from_refinement_record(record: dict) -> list[dict]:
         input_cell=deepcopy(snapshot.get("cell")),
         excluded_regions=deepcopy(record.get("excluded_regions") or []),
         comparison_domain_signature=record.get("comparison_domain_signature"),
+        refinement_background=deepcopy(result.get("background_model")),
     )
     return models
 

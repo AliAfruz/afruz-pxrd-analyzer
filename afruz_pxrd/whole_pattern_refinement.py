@@ -20,6 +20,7 @@ from .crystal_profiles import (
     staged_profile_refinement_plan,
 )
 from .crystallography import d_spacing
+from .refinement_background import SeedBackground
 from .gpu_backend import compute_backend, release_gpu_memory
 from .instrument_physics import (
     CalibrationRangeError,
@@ -1152,6 +1153,8 @@ def refine_whole_pattern(
     two_theta_max: float | None = None,
     intensity_cutoff_percent: float = 0.5,
     background_order: int = 3,
+    background_seed_y: np.ndarray | None = None,
+    background_seed_provenance: dict | None = None,
     weighting: str = "Poisson-like",
     refine_zero_shift: bool = True,
     initial_zero_shift: float = 0.0,
@@ -1193,6 +1196,8 @@ def refine_whole_pattern(
     started_at = time.perf_counter()
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
+
+    seed_background = SeedBackground(x, background_seed_y, background_seed_provenance)
 
     if mode not in WHOLE_PATTERN_MODES:
         raise WholePatternError(f"Unsupported whole-pattern mode: {mode}")
@@ -1289,6 +1294,7 @@ def refine_whole_pattern(
     except ValueError as exc:
         raise WholePatternError(str(exc)) from exc
 
+    full_weight_model = seed_background.weight_model(full_weight_model)
     if len(x_full) > maximum_optimization_points:
         indices = np.linspace(
             0,
@@ -1423,6 +1429,8 @@ def refine_whole_pattern(
                 "reason": "GPU acceleration is disabled for this run.",
             }
         background = _positive_background_basis(x_values, background_order)
+        background_offset = seed_background.offset(x_values)
+        target_y = y_values - background_offset
         weights = np.asarray(sqrt_weights, dtype=float)
         if weights.shape != y_values.shape:
             raise WholePatternError("Refinement weights no longer match the observed pattern.")
@@ -1430,7 +1438,7 @@ def refine_whole_pattern(
             intensities, background_coefficients, calculated, extraction = _solve_pawley(
                 basis,
                 background,
-                y_values,
+                target_y,
                 weights,
             )
             extraction = dict(extraction)
@@ -1451,7 +1459,7 @@ def refine_whole_pattern(
                     basis,
                     background,
                     reflections,
-                    y_values,
+                    target_y,
                     weights,
                     extraction_cycles,
                 )
@@ -1460,7 +1468,7 @@ def refine_whole_pattern(
                     basis,
                     background,
                     reflections,
-                    y_values,
+                    target_y,
                     weights,
                     extraction_cycles,
                 )
@@ -1480,8 +1488,8 @@ def refine_whole_pattern(
             "widths": widths,
             "intensities": intensities,
             "background_coefficients": background_coefficients,
-            "background": background @ background_coefficients,
-            "calculated": calculated,
+            "background": background_offset + background @ background_coefficients,
+            "calculated": calculated + background_offset,
             "weights": weights,
             "extraction_diagnostics": extraction,
             "acceleration": {
@@ -1585,7 +1593,7 @@ def refine_whole_pattern(
     intensity_diagnostics = intensity_metrology(
         final["basis"],
         _positive_background_basis(x_full, background_order),
-        observed,
+        observed - seed_background.offset(x_full),
         final["weights"],
         final["intensities"],
         final["background_coefficients"],
@@ -1929,6 +1937,7 @@ def refine_whole_pattern(
         "background_coefficients": final[
             "background_coefficients"
         ].tolist(),
+        **seed_background.result_fields(x_full, final["background_coefficients"], final["background"]),
         "observed_x": x_full.tolist(),
         "observed_y": observed.tolist(),
         "calculated_y": calculated.tolist(),

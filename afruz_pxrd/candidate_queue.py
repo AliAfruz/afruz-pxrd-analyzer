@@ -83,6 +83,8 @@ def comparison_domain_signature(x, y, settings: dict, regions) -> str:
         "weighting": settings.get("weighting"), "processed": settings.get("use_processed", False),
         "regions": [[region.start_deg, region.end_deg] for region in merge_regions(regions or [])],
     }
+    if settings.get("background_seed_provenance"):
+        domain["background_seed_sha256"] = settings["background_seed_provenance"].get("seed_sha256")
     digest.update(json.dumps(domain, sort_keys=True, allow_nan=False).encode("utf-8"))
     return digest.hexdigest()
 

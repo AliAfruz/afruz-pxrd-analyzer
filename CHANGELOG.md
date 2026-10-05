@@ -3,6 +3,35 @@
 All notable user-visible changes are recorded here. Versions follow semantic
 versioning where practical.
 
+## [23.4.0] — 2026-10-05 (local development)
+
+### Added
+
+- Shared per-dataset background selection in the regular Pawley/Le Bail/Rietveld
+  workspaces, their exclusion investigation windows, and step-wise Refinement Studio.
+- A separate background editor reusing all six existing detection methods,
+  their full controls, protected-peak preview, diagnostics and ensemble comparison.
+  Preview preparation runs in the background with progress indication.
+- Import an existing main Background preview, or choose it directly using
+  **Use for all refinements** in Pattern Preparation. AFZ retains the raw-unit
+  curve and source fingerprint. Changing raw data invalidates stale selections.
+- Native refinement of a smooth signed correction above the chosen baseline,
+  bounded so the total background remains nonnegative, using the existing CPU/CUDA
+  solvers. Raw observations/weights stay unchanged; processed input is bypassed
+  to prevent double subtraction. Ordinary refinement remains unchanged by default.
+- Frozen background settings for queued attempts; later choices cannot alter
+  pending jobs or prior results. Plots show starting and total backgrounds, and
+  TXT profile exports add starting-background and correction columns.
+- Adaptive-background uncertainty/effective degrees of freedom are not propagated:
+  Rwp/Rp remain available, but Rexp/GoF/reduced chi-square are gated. Held-out
+  diagnostics using a full-data starting curve are marked as conditional.
+- Local development only; no GitHub/Zenodo update.
+
+### Fixed
+
+- The standalone Rietveld prediction helper now initializes its axial-divergence
+  profile parameter and can reconstruct a chosen background plus signed correction.
+
 ## [23.3.2] — 2026-10-05 (local development)
 
 ### Added

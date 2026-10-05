@@ -1,4 +1,4 @@
-# Afruz PXRD Analyzer 23.3.2
+# Afruz PXRD Analyzer 23.4.0
 
 [![Windows tests](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml/badge.svg)](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23119992.svg)](https://doi.org/10.5281/zenodo.23119992)
@@ -55,6 +55,13 @@ select a completed run to render its saved fitted cell and frozen CIF atoms in
 the existing CPU/GPU/single-pore viewer. **Preview candidate crystal** under
 Steps separately shows an initial or parent-seeded candidate, labelled as a
 preview rather than a new fit. Pawley/Le Bail views do not imply atomic refinement.
+
+Local version 23.4.0 adds a shared, full **Background engine** to the regular
+Pawley/Le Bail/Rietveld refiners and Refinement Studio. Preview one of the six
+existing background methods, then **Use for all refinements** of that dataset.
+Runs use unchanged raw observations and your chosen baseline plus a fitted,
+bounded polynomial correction. AFZ, queued snapshots and clean TXT exports
+retain the selection and its diagnostics. See [Refinement backgrounds](REFINEMENT_BACKGROUND.md).
 The complete release verification is recorded in
 [`RELEASE_AUDIT.md`](RELEASE_AUDIT.md), and fixture licensing/provenance is
 tracked in [`DATA_PROVENANCE.md`](DATA_PROVENANCE.md).

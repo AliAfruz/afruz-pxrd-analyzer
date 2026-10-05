@@ -36,6 +36,7 @@ from .exclusion_regions import (
 )
 from .models import Dataset
 from .refinement_export import export_refinement_txt_bundle
+from .refinement_background import BACKGROUND_KEY, subset_background
 from .rietveld_widget import RietveldRefinementWidget
 from .sequential_refinement_workspace import SequentialRefinementWorkspace
 from .text_export import write_table_txt
@@ -348,6 +349,7 @@ class _ExclusionInvestigationMixin:
             visible=dataset.visible,
             metadata=deepcopy(dataset.metadata),
         )
+        subset_background(dataset, filtered)
         selected_y = dataset.y_processed if self._uses_processed() and dataset.y_processed is not None else dataset.y_raw
         self._source_snapshot_by_uid[dataset.uid] = {
             "x": np.asarray(dataset.x, dtype=float).copy(),
@@ -356,6 +358,9 @@ class _ExclusionInvestigationMixin:
         return filtered, audit
 
     def _uses_processed(self) -> bool:
+        dataset = self.real_main_window.selected_dataset()
+        if dataset is not None and (dataset.metadata or {}).get(BACKGROUND_KEY) is not None:
+            return False
         checkbox = getattr(self, "use_processed_check", None)
         if checkbox is None:
             checkbox = getattr(self, "use_processed", None)

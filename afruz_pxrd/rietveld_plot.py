@@ -65,6 +65,8 @@ class RietveldPlotWidget(QWidget):
         )
         self.plot.plot(x, calculated, pen=pg.mkPen(theme["gold"], width=2.0), name="Calculated")
         self.plot.plot(x, background, pen=pg.mkPen(theme["muted"], width=1.1, style=pg.QtCore.Qt.DashLine), name="Background")
+        if result.get("background_seed_y") is not None:
+            self.plot.plot(x, result["background_seed_y"], pen=pg.mkPen(theme["gold_bright"], width=1, style=pg.QtCore.Qt.DotLine), name="Chosen starting background")
         span = max(float(np.ptp(observed)), 1.0)
         offset = float(np.min(observed)) - 0.18 * span
         self.plot.plot(x, difference + offset, pen=pg.mkPen(theme["gold_bright"], width=1.15), name="Difference")

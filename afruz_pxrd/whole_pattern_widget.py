@@ -47,6 +47,8 @@ from .whole_pattern_refinement import (
     WholePatternPhaseSpec,
 )
 from .whole_pattern_worker import WholePatternWorker
+from .refinement_background import SEED_STATISTICS_NOTE, background_kwargs, selected_background
+from .refinement_background_widget import RefinementBackgroundControl
 from .widgets import (
     NoWheelComboBox,
     NoWheelDoubleSpinBox,
@@ -515,6 +517,9 @@ class WholePatternRefinementWidget(QWidget):
         form.addRow("2θ maximum", self.range_max)
         form.addRow("Reference cutoff (%)", self.reference_cutoff)
         form.addRow("Background order", self.background_order)
+        self.background_control = RefinementBackgroundControl(self.main_window)
+        self.background_control.changed.connect(self._update_statistics_status)
+        form.addRow("Chosen background", self.background_control)
         form.addRow(self.refine_zero_shift)
         form.addRow("Profile model", self.profile_model)
         form.addRow(self.refine_profile)
@@ -1044,6 +1049,7 @@ class WholePatternRefinementWidget(QWidget):
             self.import_peaks_from_main_list()
 
     def refresh_for_selected_dataset(self):
+        self.background_control.refresh()
         dataset = self.main_window.selected_dataset()
         if dataset is None:
             return
@@ -1138,7 +1144,8 @@ class WholePatternRefinementWidget(QWidget):
         return None
 
     def _selected_input_and_statistics(self, dataset):
-        use_processed = self.use_processed_check.isChecked() and dataset.y_processed is not None
+        chosen_background = selected_background(dataset)
+        use_processed = self.use_processed_check.isChecked() and dataset.y_processed is not None and chosen_background is None
         observed = np.asarray(dataset.y_processed if use_processed else dataset.y_raw, dtype=float)
         metadata = dataset.metadata if isinstance(dataset.metadata, dict) else {}
         statistical = infer_dataset_statistical_input(
@@ -1150,6 +1157,10 @@ class WholePatternRefinementWidget(QWidget):
             known_processing_scale=self._known_processing_scale(dataset),
         )
         statistical["selected_input_label"] = "processed pattern" if use_processed else "raw measured pattern"
+        if chosen_background is not None:
+            statistical["selected_input_label"] += " + chosen background/correction (processed input bypassed)"
+            statistical["statistics_expected_valid"] = False
+            statistical["statistics_note"] += " " + SEED_STATISTICS_NOTE
         return observed, statistical
 
     def _update_statistics_status(self, *_args):
@@ -1231,6 +1242,7 @@ class WholePatternRefinementWidget(QWidget):
 
         try:
             y, statistical = self._selected_input_and_statistics(dataset)
+            chosen_background_kwargs = background_kwargs(dataset)
         except Exception as exc:
             QMessageBox.warning(self, "Invalid intensity statistics", str(exc))
             return
@@ -1302,6 +1314,7 @@ class WholePatternRefinementWidget(QWidget):
             ),
             "overlap_correlation_threshold": self.overlap_threshold.value(),
             "use_gpu": self.use_cuda.isChecked(),
+            **chosen_background_kwargs,
         }
 
         window_snapshot = self._capture_window_layout()

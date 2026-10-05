@@ -673,6 +673,7 @@ class MainWindow(
         self.apply_button.clicked.connect(self.apply_processing)
         self.preview_background_button.clicked.connect(self.preview_background)
         self.background_preview_tab_button.clicked.connect(self.preview_background)
+        self.background_refinement_button.clicked.connect(self.use_background_for_refinements)
         self.background_apply_tab_button.clicked.connect(self.apply_processing)
         self.background_export_button.clicked.connect(
             lambda checked=False: self.show_export_center(

@@ -43,6 +43,8 @@ from PySide6.QtWidgets import (
 from .context_copy import CopyablePlotWidget, install_label_copy_menu, install_table_copy_menu
 from .candidate_queue import can_advance, candidate_run_label, comparison_domain_signature, pack_snapshots, parent_seed, unpack_snapshots, warm_start_settings
 from .refinement_crystal import model_from_candidate, models_from_refinement_record
+from .refinement_background import BACKGROUND_KEY, background_kwargs, selected_background
+from .refinement_background_widget import RefinementBackgroundControl
 from .crystallography import calculate_powder_pattern, load_cif
 from .exclusion_regions import ExclusionRegion, attach_exclusion_audit, filter_arrays, inclusion_mask, merge_regions
 from .gpu_backend import cuda_status
@@ -139,7 +141,7 @@ class SequentialRefinementWorker(QObject):
             minimum = 80 if self.method == "rietveld" else 50
             x_fit, arrays, audit = filter_arrays(
                 self.x,
-                (self.y,),
+                (self.y, self.settings.get("background_seed_y")),
                 self.regions,
                 minimum_points=minimum,
             )
@@ -173,6 +175,9 @@ class SequentialRefinementWorker(QObject):
                 "progress_callback": self._emit_progress,
                 "cancel_check": self._cancel_event.is_set,
             }
+            if arrays[1] is not None:
+                common.update(background_seed_y=arrays[1],
+                              background_seed_provenance=deepcopy(self.settings.get("background_seed_provenance") or {}))
             if self.method in {"pawley", "lebail"}:
                 self._emit_progress(0, 1, "Calculating the selected CIF reflection set...")
                 pattern = calculate_powder_pattern(
@@ -558,8 +563,10 @@ class SequentialRefinementWorkspace(QWidget):
         self.export_button = QPushButton("Export history (.zip)")
         self.reset_view_button = QPushButton("Reset view")
         self.queue_import_button = QPushButton("Add CIF(s)...")
+        self.background_engine_button = QPushButton("Background…")
         top.addWidget(title)
         top.addWidget(self.dataset_label, 1)
+        top.addWidget(self.background_engine_button)
         top.addWidget(self.queue_import_button)
         top.addWidget(self.reset_view_button)
         top.addWidget(self.save_project_button)
@@ -648,6 +655,7 @@ class SequentialRefinementWorkspace(QWidget):
 
         self.add_cif.clicked.connect(self.add_cif_files)
         self.queue_import_button.clicked.connect(self.add_cif_files)
+        self.background_engine_button.clicked.connect(self.background_control.open_engine)
         self.add_active_cif.clicked.connect(self.add_active_reference_cif)
         self.remove_cif.clicked.connect(self.remove_active_cif)
         self.cif_combo.currentIndexChanged.connect(self._active_cif_changed)
@@ -1162,6 +1170,9 @@ class SequentialRefinementWorkspace(QWidget):
         form.addRow("2theta maximum", self.range_max)
         form.addRow("CIF intensity cutoff (%)", self.cutoff)
         form.addRow("Background order", self.background_order)
+        self.background_control = RefinementBackgroundControl(self.main_window)
+        self.background_control.changed.connect(self._draft_exclusions_changed)
+        form.addRow("Chosen background", self.background_control)
         form.addRow("Maximum evaluations", self.max_evaluations)
         form.addRow("Optimization points", self.optimization_points)
         form.addRow("Le Bail extraction cycles", self.extraction_cycles)
@@ -1417,6 +1428,7 @@ class SequentialRefinementWorkspace(QWidget):
         return self.main_window.selected_dataset()
 
     def refresh_for_selected_dataset(self):
+        self.background_control.refresh()
         dataset = self._current_dataset()
         if self._last_dataset_uid and (dataset is None or str(dataset.uid) != self._last_dataset_uid):
             self._capture_step_draft(self._last_dataset_uid)
@@ -1497,6 +1509,12 @@ class SequentialRefinementWorkspace(QWidget):
         self._launch_record(record)
 
     def _make_record(self, method, dataset, structure, settings, regions, label, parent_id, metadata=None):
+        settings = deepcopy(settings)
+        chosen = background_kwargs(dataset)
+        if chosen:
+            settings.update(chosen)
+            settings["background_seed_y"] = chosen["background_seed_y"].tolist()
+            settings["use_processed"] = False  # Never subtract a chosen raw-unit baseline twice.
         observed = dataset.y_processed if settings["use_processed"] and dataset.y_processed is not None else dataset.y_raw
         x, y = np.asarray(dataset.x, dtype=float), np.asarray(observed, dtype=float)
         if x.shape != y.shape:
@@ -1890,8 +1908,16 @@ class SequentialRefinementWorkspace(QWidget):
     def _draw_preview(self, dataset):
         self._clear_plot()
         if dataset is not None:
-            y = dataset.y_processed if self.use_processed.isChecked() and dataset.y_processed is not None else dataset.y_raw
+            has_chosen_background = bool((dataset.metadata or {}).get(BACKGROUND_KEY))
+            y = dataset.y_processed if self.use_processed.isChecked() and dataset.y_processed is not None and not has_chosen_background else dataset.y_raw
             self.plot.plot(dataset.x, y, pen=pg.mkPen(174, 190, 221, 220, width=1.25), name="Observed preview")
+            if has_chosen_background:
+                try:
+                    chosen = selected_background(dataset)
+                except ValueError as exc:
+                    self.background_control.status.setText(str(exc))
+                else:
+                    self.plot.plot(dataset.x, chosen["background"], pen=pg.mkPen(235, 181, 55, width=1.25), name="Chosen starting background")
             self.plot.enableAutoRange()
         self.exclusion_editor.bind_plot(self.plot)
         self._fill_reflections(None)
@@ -1915,6 +1941,9 @@ class SequentialRefinementWorkspace(QWidget):
         ):
             sx, sy = self._finite_segments(x, values)
             self.plot.plot(sx, sy, connect="finite", pen=pen, name=name)
+        if result.get("background_seed_y") is not None:
+            sx, sy = self._finite_segments(x, np.asarray(result["background_seed_y"], dtype=float))
+            self.plot.plot(sx, sy, connect="finite", pen=pg.mkPen(theme["gold_bright"], width=1, style=Qt.DotLine), name="Chosen starting background")
         if len(x) and len(difference):
             span = max(float(np.ptp(observed)), 1.0)
             offset = float(np.min(observed)) - 0.18 * span

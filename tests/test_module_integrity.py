@@ -18,7 +18,7 @@ def test_all_scientific_sources_compile(project_root: Path):
             failures.append(f"{path.name}: {exc}")
     # gpu_backend.py and crystal_gpu.py are optional, import-safe modules.
     # Phase 13 adds the deterministic, non-mutating Crystal Studio view planner.
-    assert len(paths) == 155
+    assert len(paths) == 157
     assert not failures, "Source compilation failures:\n" + "\n".join(failures)
 
 
@@ -62,4 +62,4 @@ def test_runtime_versions_match_the_lock(project_root: Path):
 
 
 def test_package_version_is_preserved():
-    assert afruz_pxrd.__version__ == "23.3.2"
+    assert afruz_pxrd.__version__ == "23.4.0"

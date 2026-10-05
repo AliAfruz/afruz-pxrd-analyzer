@@ -70,6 +70,9 @@ def export_refinement_txt_bundle(
         "background_intensity": result.get("background_y", []),
         "difference_observed_minus_calculated": result.get("difference_y", []),
     }
+    if result.get("background_seed_y") is not None:
+        profile_columns["chosen_background_intensity"] = result["background_seed_y"]
+        profile_columns["fitted_background_correction"] = result["background_correction_y"]
     if result.get("observed_sigma") is not None:
         profile_columns["observed_sigma"] = result.get("observed_sigma", [])
     if result.get("statistical_weights") is not None:

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from ..main_window_dependencies import *
 from .base import WorkspaceAdapter
+from ..refinement_background import BACKGROUND_KEY, array_fingerprint, background_selection
+from ..refinement_background_widget import refresh_background_controls
 
 
 class PreparationWorkspace(WorkspaceAdapter):
@@ -38,8 +40,10 @@ class PreparationWorkspaceMixin:
         button_row.addWidget(self.background_preview_tab_button)
         button_row.addWidget(self.background_apply_tab_button)
         button_row.addWidget(self.background_export_button)
+        self.background_refinement_button = QPushButton("Use for all refinements")
         button_row.addStretch(1)
         layout.addLayout(button_row)
+        layout.addWidget(self.background_refinement_button, 0, Qt.AlignLeft)
 
         self.background_plot = AdvancedBackgroundPlotWidget()
         self.background_plot.setMinimumHeight(360)
@@ -247,6 +251,7 @@ class PreparationWorkspaceMixin:
         self._push_undo_checkpoint("Preview background")
         self.backgrounds[ds.uid] = np.asarray(result["background"], dtype=float)
         self.background_results[ds.uid] = {
+            "source_pattern_sha256": array_fingerprint(ds.x, ds.y_raw),
             "diagnostics": result.get("diagnostics", {}),
             "parameters": result.get("parameters", {}),
             "background": np.asarray(result["background"], dtype=float).tolist(),
@@ -362,6 +367,25 @@ class PreparationWorkspaceMixin:
                 rebuilt_record.pop("display_background", None)
             rebuilt[uid] = rebuilt_record
         self.background_results = rebuilt
+
+    def use_background_for_refinements(self):
+        dataset = self.selected_dataset()
+        record = None if dataset is None else self.background_results.get(dataset.uid)
+        try:
+            if dataset is None or not isinstance(record, dict):
+                raise ValueError("Preview a background for the selected dataset first.")
+            fingerprint = array_fingerprint(dataset.x, dataset.y_raw)
+            if record.get("source_pattern_sha256", fingerprint) != fingerprint:
+                raise ValueError("The raw pattern changed. Preview the background again.")
+            model = background_selection(dataset, record)
+        except ValueError as exc:
+            QMessageBox.warning(self, "Background unavailable", str(exc))
+            return
+        self._push_undo_checkpoint("Choose shared refinement background")
+        dataset.metadata[BACKGROUND_KEY] = model
+        self._mark_project_dirty()
+        refresh_background_controls(self)
+        self.statusBar().showMessage("Chosen background + fitted correction will be used by all future refinements of this dataset. Save .AFZ to retain it.")
 
     def populate_background_result(self):
         if not hasattr(self, "background_plot"):
