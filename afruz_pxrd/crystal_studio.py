@@ -274,6 +274,7 @@ class CrystalStudioDialog(QDialog):
         self._load_job = None
         self._qa_dialogs = []
         self._gpu_dialogs = []
+        self._model_export_dialogs = []
         self._last_scene = None
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
@@ -539,6 +540,10 @@ class CrystalStudioDialog(QDialog):
         self.export_button.setObjectName("primaryButton")
         self.export_button.clicked.connect(self.export_figure)
         export.addRow(self.export_button)
+        self.model_export_button = QPushButton("Export editable 3D for Blender…")
+        self.model_export_button.setEnabled(False)
+        self.model_export_button.clicked.connect(self.export_editable_model)
+        export.addRow(self.model_export_button)
         hint = QLabel("Includes a reusable .crystal.json scene with the structure, camera and display settings.")
         hint.setWordWrap(True)
         hint.setObjectName("mutedLabel")
@@ -754,6 +759,7 @@ class CrystalStudioDialog(QDialog):
             flagged = bool(model and model.get("provenance", {}).get("publication_ready") is False)
             ready = not flagged or self.allow_flagged_export.isChecked()
         self.export_button.setEnabled(ready)
+        self.model_export_button.setEnabled(ready and self._last_scene is not None)
 
     def settings(self):
         return RenderSettings(style=self.style_combo.currentText(), repeats=tuple(spin.value() for spin in self.repeats),
@@ -850,6 +856,7 @@ class CrystalStudioDialog(QDialog):
     def _schedule(self, *_):
         self._revision += 1
         self._last_scene = None
+        self.model_export_button.setEnabled(False)
         if hasattr(self, "gpu_view_button"):
             self.gpu_view_button.setEnabled(False)
         self._timer.start()
@@ -874,6 +881,7 @@ class CrystalStudioDialog(QDialog):
         if revision != self._revision:
             return
         self._last_scene = scene
+        self._update_export_availability()
         self.gpu_view_button.setEnabled(True)
         if self._preview_job is not None:
             if self.gpu_first.isChecked():
@@ -895,6 +903,7 @@ class CrystalStudioDialog(QDialog):
             self.status.setText(error)
             self.export_button.setEnabled(False)
             self.gpu_view_button.setEnabled(False)
+            self.model_export_button.setEnabled(False)
             self.preview.clear()
             self.preview._image = None
             self.preview.setText(error)
@@ -1088,6 +1097,17 @@ class CrystalStudioDialog(QDialog):
         self._qa_dialogs.append(dialog)
         dialog.destroyed.connect(lambda *_: self._qa_dialogs.remove(dialog) if dialog in self._qa_dialogs else None)
         dialog.show()
+
+    def export_editable_model(self):
+        if self._last_scene is None:
+            QMessageBox.information(self, "Scene not ready", "Wait for the current geometry to finish preparing.")
+            return None
+        from .crystal_3d_export_dialog import EditableCrystalExportDialog
+        dialog = EditableCrystalExportDialog(self._last_scene, self)
+        self._model_export_dialogs.append(dialog)
+        dialog.destroyed.connect(lambda *_args, owned=dialog: self._model_export_dialogs.remove(owned) if owned in self._model_export_dialogs else None)
+        dialog.show()
+        return dialog
 
     def export_figure(self):
         if not self.models or self._export_job is not None:

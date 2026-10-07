@@ -1,6 +1,6 @@
 # Step-wise CIF candidate comparison
 
-Local version 23.4.0. No GitHub or Zenodo update is included in this build.
+Local version 23.5.0. No GitHub or Zenodo update is included in this build.
 
 ## Open and run Step 1
 

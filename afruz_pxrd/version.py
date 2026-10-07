@@ -8,7 +8,7 @@ from __future__ import annotations
 
 
 APP_NAME = "Afruz PXRD Analyzer"
-APP_VERSION = "23.4.0"
+APP_VERSION = "23.5.0"
 APP_WINDOW_TITLE = f"{APP_NAME} — {APP_VERSION}"
 APP_RELEASE = f"{APP_NAME} {APP_VERSION}"
 

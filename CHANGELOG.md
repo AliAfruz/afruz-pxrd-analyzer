@@ -3,6 +3,21 @@
 All notable user-visible changes are recorded here. Versions follow semantic
 versioning where practical.
 
+## [23.5.0] — 2026-10-07 (local development)
+
+### Added
+
+- Editable glTF 2.0 binary (GLB) export from GPU Interactive Crystal and main
+  Crystal Studio, using the same frozen geometry for CIF, refinement and pore views.
+- Individually named atom/contact/pore objects, shared compact sphere/cylinder
+  meshes, editable polyhedral surfaces grouped by element, H-bond and cell guides.
+- Sphere quality, geometry selection, material opacity/color, worker progress,
+  occupancy/site metadata and explicit Ångström/graphical-scale conventions.
+- Source/refinement provenance, reusable scene and Blender guide sidecars;
+  overwritten-file backups, nonfinite geometry rejection and structure-review gate.
+- Existing CPU/GPU image-rendering geometry, pore algorithms and refinement
+  calculations are unchanged. No GitHub/Zenodo publication is included.
+
 ## [23.4.0] — 2026-10-05 (local development)
 
 ### Added

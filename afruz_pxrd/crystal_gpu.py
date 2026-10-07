@@ -276,6 +276,7 @@ class GpuCrystalViewDialog(QDialog):
 
         self._gl = gl
         self._scene = scene
+        self._model_export_dialogs = []
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle("GPU Interactive Crystal — Afruz PXRD")
         self.resize(1180, 820)
@@ -463,6 +464,15 @@ class GpuCrystalViewDialog(QDialog):
         buttons.rejected.connect(self.close)
         row.addWidget(buttons)
         layout.addLayout(row)
+
+        model_row = QHBoxLayout()
+        self.model_export_button = QPushButton("Export editable 3D for Blender…")
+        self.model_export_button.clicked.connect(self.export_editable_model)
+        model_row.addWidget(self.model_export_button)
+        model_note = QLabel("GLB meshes + colors + source provenance · no DPI needed")
+        model_note.setWordWrap(True)
+        model_row.addWidget(model_note, 1)
+        layout.addLayout(model_row)
 
         self._populate()
         self.background_combo.currentTextChanged.connect(self._background_changed)
@@ -711,6 +721,15 @@ class GpuCrystalViewDialog(QDialog):
             )
         except Exception as exc:
             self.renderer_label.setText(f"OpenGL context ready; renderer details unavailable: {exc}")
+
+    def export_editable_model(self):
+        from .crystal_3d_export_dialog import EditableCrystalExportDialog
+        dialog = EditableCrystalExportDialog(self._scene, self,
+            background_style=self.background_combo.currentText(), camera=_gpu_camera_document(self.view))
+        self._model_export_dialogs.append(dialog)
+        dialog.destroyed.connect(lambda *_args, owned=dialog: self._model_export_dialogs.remove(owned) if owned in self._model_export_dialogs else None)
+        dialog.show()
+        return dialog
 
     def export_figure(self):
         width = int(self.resolution.currentData())

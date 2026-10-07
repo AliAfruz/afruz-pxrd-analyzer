@@ -1,4 +1,4 @@
-# Afruz PXRD Analyzer 23.4.0
+# Afruz PXRD Analyzer 23.5.0
 
 [![Windows tests](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml/badge.svg)](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23119992.svg)](https://doi.org/10.5281/zenodo.23119992)
@@ -62,6 +62,11 @@ existing background methods, then **Use for all refinements** of that dataset.
 Runs use unchanged raw observations and your chosen baseline plus a fitted,
 bounded polynomial correction. AFZ, queued snapshots and clean TXT exports
 retain the selection and its diagnostics. See [Refinement backgrounds](REFINEMENT_BACKGROUND.md).
+Local version 23.5.0 adds **Export editable 3D for Blender…** to GPU Crystal Studio
+and the main Crystal Studio. Export GLB atoms, contact cylinders, polyhedral
+surfaces, orange pore envelopes and cell guides with source provenance and
+explicit Ångström/display-unit conventions. See [Blender export](BLENDER_EXPORT.md).
+
 The complete release verification is recorded in
 [`RELEASE_AUDIT.md`](RELEASE_AUDIT.md), and fixture licensing/provenance is
 tracked in [`DATA_PROVENANCE.md`](DATA_PROVENANCE.md).

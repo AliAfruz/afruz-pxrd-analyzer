@@ -62,7 +62,7 @@ def test_separate_window_has_one_shared_state_and_reopens_without_duplicates(qtb
     assert isinstance(dialog, QDialog) and dialog.isWindow() and not dialog.isModal()
     assert workspace.window() is dialog
     assert dialog.refinement_widget is workspace
-    assert "23.4.0" in dialog.windowTitle()
+    assert "23.5.0" in dialog.windowTitle()
     workspace.exclusion_editor.set_regions([(20, 21, "retain this mask")])
     pending = workspace.queue_checked_candidates()
     dialog.close()
