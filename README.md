@@ -1,4 +1,8 @@
-# Afruz PXRD Analyzer 23.5.0
+# Afruz PXRD Analyzer 23.5.1
+
+Local patch 23.5.1 corrects Le Bail starting-area scaling and observed-intensity
+repartition on both CPU and CUDA, and reports incomplete extraction convergence.
+Existing saved results are preserved; rerun Le Bail to apply the corrected solver.
 
 [![Windows tests](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml/badge.svg)](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23119992.svg)](https://doi.org/10.5281/zenodo.23119992)

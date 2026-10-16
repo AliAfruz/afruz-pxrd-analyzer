@@ -56,3 +56,24 @@ Primary technical references:
 - Geometry correction and residual/calibrated zero shift remain numerically separate.
 - Covariance and overlap tables are included in the reproducible export manifest.
 - Full historical tests and Phase 0 baseline artifacts remain preserved.
+
+## Le Bail numerical correction (23.5.1)
+
+The CPU and CUDA paths share one damped observed-area repartition implementation:
+`I_new[h] = I[h] * sum_i(P[i,h] * (y[i]-b[i]) / sum_k(P[i,k]*I[k])) / sum_i(P[i,h])`,
+followed by integrated-intensity positivity and 0.45/0.55 damping. Statistical
+square-root weights enter background fitting and outer profile refinement, not
+the area partition. Negative net noise is retained through summation rather than
+rectified pointwise. Only numerically vanishing total-profile tails (below
+1e-14 of the maximum) are excluded from the division to prevent overflow.
+This remains Le Bail-style iteration, not a relabelled Pawley least-squares solve.
+
+Starting intensity ratios are projected onto the sampled profile with a single
+weighted scale; this avoids dependence on point spacing. A final background fit
+keeps the returned profile synchronized. Diagnostics retain the requested cycle
+history, identify algorithm revision 2, and require both intensity and background
+stability at 1e-5 for the convergence flag. No low Rwp is guaranteed for an
+incorrect phase, radiation, background or profile model.
+
+Reference for the observed-intensity partition and angular-step normalization:
+[GSAS-II Fobs extraction implementation](https://gsas-ii.readthedocs.io/en/latest/_modules/GSASII/GSASIImpsubs.html).

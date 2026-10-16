@@ -3,6 +3,26 @@
 All notable user-visible changes are recorded here. Versions follow semantic
 versioning where practical.
 
+## [23.5.1] — 2026-10-16 (local development)
+
+### Fixed
+
+- Le Bail initial integrated intensities now use a weighted scale of the sampled
+  reference profile, removing the erroneous inverse-step factor from an
+  index-domain trapezoidal sum. Raw/normalized observations are not rescaled.
+- Observed-area repartition no longer applies square-root least-squares weights
+  or clips every negative background-subtracted point to zero. Signed net counts
+  are integrated before imposing nonnegative reflection intensities; background
+  and outer nonlinear fits retain their original statistical weights.
+- Removed the arbitrary ratio ceiling and synchronized the final background
+  with the final intensity cycle. CPU and CUDA use the same extraction routine.
+- Added cooperative inner-cycle cancellation, extraction revision/initialization
+  diagnostics, and an explicit warning when the requested cycles have not converged.
+- Applies to regular, step-wise, exclusion and series Le Bail workflows through
+  their shared engine. Pawley/Rietveld calculations and stored results are unchanged.
+- Added NaCl, sampling/normalization, signed-noise, overlap, background and
+  CPU/CUDA regression coverage. No manuscript edits or remote publication.
+
 ## [23.5.0] — 2026-10-07 (local development)
 
 ### Added

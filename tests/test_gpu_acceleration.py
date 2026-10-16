@@ -143,6 +143,10 @@ def test_cuda_le_bail_repartition_matches_cpu():
     assert accelerated[0] == pytest.approx(cpu[0], rel=3e-12, abs=3e-10)
     assert accelerated[2] == pytest.approx(cpu[2], rel=3e-12, abs=3e-10)
     assert accelerated[3]["acceleration"]["requested"] is True
+    if cuda_status()["available"]:
+        assert accelerated[3]["acceleration"]["used"] is True
+    assert accelerated[3]["algorithm_revision"] == cpu[3]["algorithm_revision"] == 2
+    assert accelerated[3]["final_background_refitted"] is True
 
 
 def test_gpu_atom_spheres_are_one_batched_lit_mesh():

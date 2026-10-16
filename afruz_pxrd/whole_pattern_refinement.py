@@ -903,32 +903,97 @@ def _solve_le_bail(
     y: np.ndarray,
     weights: np.ndarray,
     cycles: int,
+    *,
+    cancel_check: Callable[[], bool] | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
+    return _le_bail_repartition(
+        peak_basis, background_basis, reflections, y, weights, cycles,
+        xp=np, cancel_check=cancel_check,
+    )
+
+
+def _le_bail_initial_intensities(
+    peak_basis: np.ndarray,
+    reflections: list[dict],
+    y: np.ndarray,
+    weights: np.ndarray,
+) -> np.ndarray:
+    """Scale the *sampled profile*, not an integral over sample indices.
+
+    Profile columns carry inverse-degree units. Summing counts without the
+    angular step formerly overestimated starting areas by about 1 / step.
+    A one-parameter weighted projection is independent of that convention,
+    intensity units, and the number of optimization-grid points. Reference
+    intensities seed ratios only; they are not held fixed during extraction.
+    """
+    reference = np.maximum(
+        np.asarray([row["reference_intensity"] for row in reflections], dtype=float),
+        1e-8,
+    )
+    reference /= np.max(reference)
+    profile = peak_basis @ reference
+    baseline = max(float(np.percentile(y, 5)), 0.0)
+    weighted_profile = profile * weights
+    denominator = float(weighted_profile @ weighted_profile)
+    scale = (
+        float(weighted_profile @ ((y - baseline) * weights)) / denominator
+        if denominator > 0.0 else 0.0
+    )
+    # Keep a positive seed even when initial positions do not overlap the data.
+    # Unlike a fixed count floor this scales with the measured intensity units.
+    fallback = (
+        float(np.max(np.abs(y))) / float(np.max(profile)) * 1e-12
+        if np.max(profile) > 0.0 else 0.0
+    )
+    return reference * max(scale, fallback, np.finfo(float).tiny)
+
+
+def _le_bail_repartition(
+    peak_basis: np.ndarray,
+    background_basis: np.ndarray,
+    reflections: list[dict],
+    y: np.ndarray,
+    weights: np.ndarray,
+    cycles: int,
+    *,
+    xp,
+    cancel_check: Callable[[], bool] | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
+    """Shared CPU/CUDA, damped Rietveld/Le Bail observed-area repartition.
+
+    I'_h = I_h sum_i[p_ih (y_i - b_i) / sum_k(p_ik I_k)] / sum_i p_ih.
+    Integration is unweighted; sqrt least-squares weights belong in the
+    background/nonlinear fits, not in observed-area partitioning. Signed net
+    counts are retained until the *integrated* intensity positivity constraint
+    is applied, so negative background noise does not become positive signal.
+    This is not a Pawley intensity least-squares solve.
+    """
     if peak_basis.shape[1] == 0:
         raise WholePatternError("No reflections remain in the selected range.")
-    reference = np.asarray(
-        [row["reference_intensity"] for row in reflections],
-        dtype=float,
+    to_cpu = np.asarray if xp is np else xp.asnumpy
+    peaks = xp.asarray(peak_basis, dtype=xp.float64)
+    backgrounds = xp.asarray(background_basis, dtype=xp.float64)
+    observed = xp.asarray(y, dtype=xp.float64)
+    fit_weights = xp.asarray(weights, dtype=xp.float64)
+    intensities = xp.asarray(
+        _le_bail_initial_intensities(peak_basis, reflections, y, weights),
+        dtype=xp.float64,
     )
-    reference = np.maximum(reference, 1e-8)
-    scale = max(
-        float(np.trapezoid(np.maximum(y - np.percentile(y, 5), 0.0))),
-        1.0,
-    )
-    intensities = reference / float(np.sum(reference)) * scale
-    background_coefficients = np.zeros(
-        background_basis.shape[1],
-        dtype=float,
-    )
+    background_coefficients = np.zeros(background_basis.shape[1], dtype=float)
     weighted_background = background_basis * weights[:, None]
+    denominator = xp.maximum(xp.sum(peaks, axis=0), np.finfo(float).tiny)
 
-    history = []
-    for cycle in range(max(2, int(cycles))):
-        peak_calculated = peak_basis @ intensities
-        target_background = y - peak_calculated
+    def check_cancelled():
+        if cancel_check is not None and cancel_check():
+            raise WholePatternCancelled("Whole-pattern refinement was cancelled.")
+
+    def fit_background(peak_calculated):
+        check_cancelled()
+        if background_basis.shape[1] == 0:
+            return np.empty(0, dtype=float)
         background_solution = lsq_linear(
             weighted_background,
-            target_background * weights,
+            (y - to_cpu(peak_calculated)) * weights,
             bounds=(0.0, np.inf),
             method="trf",
             lsmr_tol="auto",
@@ -939,46 +1004,67 @@ def _solve_le_bail(
                 "Le Bail background solution failed: "
                 f"{background_solution.message}"
             )
-        background_coefficients = np.asarray(
-            background_solution.x,
-            dtype=float,
+        return np.asarray(background_solution.x, dtype=float)
+
+    history = []
+    peak_calculated = peaks @ intensities
+    for cycle in range(max(2, int(cycles))):
+        check_cancelled()
+        background_coefficients = fit_background(peak_calculated)
+        background = backgrounds @ xp.asarray(background_coefficients)
+        # Ignore only numerically vanishing tails to avoid 0/0 and overflow.
+        # The relative floor preserves linear-intensity normalization invariance.
+        floor = xp.maximum(xp.max(peak_calculated) * 1e-14, np.finfo(float).tiny)
+        valid = peak_calculated > floor
+        ratio = xp.where(
+            valid,
+            (observed - background) / xp.where(valid, peak_calculated, 1.0),
+            0.0,
         )
-        background = background_basis @ background_coefficients
-        net_observed = np.maximum(y - background, 0.0)
-        peak_calculated = np.maximum(peak_basis @ intensities, 1e-12)
-        ratio = np.clip(net_observed / peak_calculated, 0.0, 50.0)
-        numerator = peak_basis.T @ (weights * ratio)
-        denominator = np.maximum(
-            peak_basis.T @ weights,
-            1e-12,
-        )
-        updated = intensities * numerator / denominator
-        next_intensities = 0.45 * intensities + 0.55 * np.maximum(updated, 0.0)
+        updated = intensities * (peaks.T @ ratio) / denominator
+        next_intensities = 0.45 * intensities + 0.55 * xp.maximum(updated, 0.0)
         relative_change = float(
-            np.linalg.norm(next_intensities - intensities)
-            / max(np.linalg.norm(intensities), 1e-12)
+            to_cpu(
+                xp.linalg.norm(next_intensities - intensities)
+                / xp.maximum(xp.linalg.norm(intensities), np.finfo(float).tiny)
+            )
         )
         intensities = next_intensities
-        cycle_calculated = (
-            peak_basis @ intensities
-            + background_basis @ background_coefficients
-        )
+        peak_calculated = peaks @ intensities
+        cycle_calculated = peak_calculated + background
         history.append(
             {
                 "cycle": cycle + 1,
                 "relative_intensity_change": relative_change,
                 "weighted_residual_sum_squares": float(
-                    np.sum(((y - cycle_calculated) * weights) ** 2)
+                    to_cpu(xp.sum(((observed - cycle_calculated) * fit_weights) ** 2))
                 ),
             }
         )
 
-    calculated = (
-        peak_basis @ intensities
-        + background_basis @ background_coefficients
+    # The last intensity update must not be paired with the preceding cycle's
+    # background, particularly when the caller requests only a few cycles.
+    final_coefficients = fit_background(peak_calculated)
+    background_change = float(
+        np.linalg.norm(final_coefficients - background_coefficients)
+        / max(
+            np.linalg.norm(background_coefficients),
+            np.linalg.norm(final_coefficients),
+            np.finfo(float).tiny,
+        )
     )
-    return intensities, background_coefficients, calculated, {
+    calculated = peak_calculated + backgrounds @ xp.asarray(final_coefficients)
+    history[-1]["weighted_residual_sum_squares"] = float(
+        to_cpu(xp.sum(((observed - calculated) * fit_weights) ** 2))
+    )
+    return to_cpu(intensities), final_coefficients, to_cpu(calculated), {
         "algorithm": "damped Le Bail profile repartition",
+        "algorithm_revision": 2,
+        "initialization": "weighted scale of the sampled reference profile",
+        "repartition_weighting": "unweighted observed-area partition",
+        "negative_net_policy": "signed net counts; nonnegative integrated intensities",
+        "final_background_refitted": True,
+        "final_relative_background_change": background_change,
         "cycles": len(history),
         "final_relative_intensity_change": history[-1][
             "relative_intensity_change"
@@ -986,6 +1072,7 @@ def _solve_le_bail(
         "history": history,
         "converged_at_1e-5": bool(
             history[-1]["relative_intensity_change"] <= 1e-5
+            and background_change <= 1e-5
         ),
     }
 
@@ -997,6 +1084,8 @@ def _solve_le_bail_cuda(
     y: np.ndarray,
     weights: np.ndarray,
     cycles: int,
+    *,
+    cancel_check: Callable[[], bool] | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
     """Le Bail repartition with CUDA matrix products and CPU bounded background."""
     workload = int(peak_basis.size * max(2, int(cycles)))
@@ -1006,7 +1095,8 @@ def _solve_le_bail_cuda(
     # independently at a much lower threshold.
     if workload < 50_000_000:
         values = _solve_le_bail(
-            peak_basis, background_basis, reflections, y, weights, cycles
+            peak_basis, background_basis, reflections, y, weights, cycles,
+            cancel_check=cancel_check,
         )
         diagnostics = dict(values[3])
         diagnostics["acceleration"] = {
@@ -1021,7 +1111,8 @@ def _solve_le_bail_cuda(
     xp, status = compute_backend(True)
     if xp is np:
         values = _solve_le_bail(
-            peak_basis, background_basis, reflections, y, weights, cycles
+            peak_basis, background_basis, reflections, y, weights, cycles,
+            cancel_check=cancel_check,
         )
         diagnostics = dict(values[3])
         diagnostics["acceleration"] = dict(status) | {
@@ -1030,105 +1121,21 @@ def _solve_le_bail_cuda(
         return values[0], values[1], values[2], diagnostics
 
     try:
-        if peak_basis.shape[1] == 0:
-            raise WholePatternError("No reflections remain in the selected range.")
-        reference = np.asarray(
-            [row["reference_intensity"] for row in reflections], dtype=float
-        )
-        reference = np.maximum(reference, 1e-8)
-        scale = max(
-            float(np.trapezoid(np.maximum(y - np.percentile(y, 5), 0.0))),
-            1.0,
-        )
-        initial_intensities = reference / float(np.sum(reference)) * scale
-        peak_gpu = xp.asarray(peak_basis, dtype=xp.float64)
-        background_gpu = xp.asarray(background_basis, dtype=xp.float64)
-        y_gpu = xp.asarray(y, dtype=xp.float64)
-        weights_gpu = xp.asarray(weights, dtype=xp.float64)
-        intensities_gpu = xp.asarray(initial_intensities, dtype=xp.float64)
-        background_coefficients = np.zeros(background_basis.shape[1], dtype=float)
-        weighted_background = background_basis * weights[:, None]
-        denominator = xp.maximum(peak_gpu.T @ weights_gpu, 1e-12)
-
-        history = []
-        for cycle in range(max(2, int(cycles))):
-            peak_calculated_gpu = peak_gpu @ intensities_gpu
-            target_background = xp.asnumpy(y_gpu - peak_calculated_gpu)
-            background_solution = lsq_linear(
-                weighted_background,
-                target_background * weights,
-                bounds=(0.0, np.inf),
-                method="trf",
-                lsmr_tol="auto",
-                max_iter=250,
-            )
-            if not background_solution.success:
-                raise WholePatternError(
-                    "Le Bail background solution failed: "
-                    f"{background_solution.message}"
-                )
-            background_coefficients = np.asarray(background_solution.x, dtype=float)
-            coefficients_gpu = xp.asarray(background_coefficients, dtype=xp.float64)
-            background_values_gpu = background_gpu @ coefficients_gpu
-            net_observed_gpu = xp.maximum(y_gpu - background_values_gpu, 0.0)
-            peak_calculated_gpu = xp.maximum(peak_gpu @ intensities_gpu, 1e-12)
-            ratio_gpu = xp.clip(net_observed_gpu / peak_calculated_gpu, 0.0, 50.0)
-            numerator = peak_gpu.T @ (weights_gpu * ratio_gpu)
-            updated = intensities_gpu * numerator / denominator
-            next_intensities = (
-                0.45 * intensities_gpu + 0.55 * xp.maximum(updated, 0.0)
-            )
-            relative_change = float(
-                xp.asnumpy(
-                    xp.linalg.norm(next_intensities - intensities_gpu)
-                    / xp.maximum(xp.linalg.norm(intensities_gpu), 1e-12)
-                )
-            )
-            intensities_gpu = next_intensities
-            cycle_calculated_gpu = (
-                peak_gpu @ intensities_gpu
-                + background_gpu @ coefficients_gpu
-            )
-            weighted_rss = float(
-                xp.asnumpy(
-                    xp.sum(((y_gpu - cycle_calculated_gpu) * weights_gpu) ** 2)
-                )
-            )
-            history.append(
-                {
-                    "cycle": cycle + 1,
-                    "relative_intensity_change": relative_change,
-                    "weighted_residual_sum_squares": weighted_rss,
-                }
-            )
-
-        calculated_gpu = (
-            peak_gpu @ intensities_gpu
-            + background_gpu @ xp.asarray(background_coefficients, dtype=xp.float64)
+        values = _le_bail_repartition(
+            peak_basis, background_basis, reflections, y, weights, cycles,
+            xp=xp, cancel_check=cancel_check,
         )
         acceleration = dict(status)
         acceleration.update(requested=True, used=True, workload=workload)
-        diagnostics = {
-            "algorithm": "damped Le Bail profile repartition",
-            "cycles": len(history),
-            "final_relative_intensity_change": history[-1]["relative_intensity_change"],
-            "history": history,
-            "converged_at_1e-5": bool(
-                history[-1]["relative_intensity_change"] <= 1e-5
-            ),
-            "acceleration": acceleration,
-        }
-        return (
-            xp.asnumpy(intensities_gpu),
-            background_coefficients,
-            xp.asnumpy(calculated_gpu),
-            diagnostics,
-        )
-    except WholePatternError:
+        diagnostics = dict(values[3])
+        diagnostics["acceleration"] = acceleration
+        return values[0], values[1], values[2], diagnostics
+    except (WholePatternError, WholePatternCancelled):
         raise
     except Exception as exc:
         values = _solve_le_bail(
-            peak_basis, background_basis, reflections, y, weights, cycles
+            peak_basis, background_basis, reflections, y, weights, cycles,
+            cancel_check=cancel_check,
         )
         diagnostics = dict(values[3])
         diagnostics["acceleration"] = {
@@ -1462,6 +1469,7 @@ def refine_whole_pattern(
                     target_y,
                     weights,
                     extraction_cycles,
+                    cancel_check=cancel_check,
                 )
             else:
                 intensities, background_coefficients, calculated, extraction = _solve_le_bail(
@@ -1471,6 +1479,7 @@ def refine_whole_pattern(
                     target_y,
                     weights,
                     extraction_cycles,
+                    cancel_check=cancel_check,
                 )
                 extraction = dict(extraction)
                 extraction["acceleration"] = {
@@ -1799,6 +1808,12 @@ def refine_whole_pattern(
             "intensities in those groups are not identifiable."
         )
     if mode == "Le Bail-style extraction":
+        if not final["extraction_diagnostics"]["converged_at_1e-5"]:
+            warnings.append(
+                "Le Bail intensity/background cycling has not converged at 1e-5. "
+                "Increase Le Bail cycles and inspect fit stability; completion of "
+                "the outer profile optimizer does not establish extraction convergence."
+            )
         warnings.append(
             "Le Bail intensity uncertainties are post-extraction linearized "
             "approximations; they are not a covariance from the iterative "
