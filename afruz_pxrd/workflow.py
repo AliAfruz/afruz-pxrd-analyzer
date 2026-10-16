@@ -98,7 +98,7 @@ TASKS: tuple[WorkflowTask, ...] = (
     WorkflowTask("cif_cell", "CIF & unit cell", "phase_structure", False, "Inspect a known structure and refine its unit cell against observed peaks."),
     WorkflowTask("cif_simulator", "Simulated PXRD from CIF", "phase_structure", True, "Calculate and inspect a large central stick pattern and broadened PXRD preview directly from a CIF."),
     WorkflowTask("cif_library", "CIF library & structure match", "phase_structure", True, "Build a local CIF index, rank structure candidates and send selected CIFs to refinement."),
-    WorkflowTask("unknown_phase", "Unknown phase", "phase_structure", True, "Create a residual, curate reflections and run native Afruz indexing."),
+    WorkflowTask("unknown_phase", "Unknown phase", "phase_structure", True, "Create a residual, curate reflections and run native DIFFRUX indexing."),
     WorkflowTask("solve_structure", "Solve structure", "phase_structure", True, "Prepare and validate an atomic model before Rietveld refinement."),
     WorkflowTask("pawley_lebail", "Pawley / Le Bail", "refinement_qpa", True, "Verify candidate cells without requiring an atomic structure."),
     WorkflowTask("rietveld", "Rietveld refinement", "refinement_qpa", True, "Refine only validated atomic models and review parameter correlations."),

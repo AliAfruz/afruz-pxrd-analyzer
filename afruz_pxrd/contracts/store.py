@@ -110,7 +110,7 @@ def _engine(payload: Mapping[str, Any], kind: str) -> EngineIdentity:
         name = None
     name = name or payload.get("backend") or payload.get("method")
     return EngineIdentity(
-        str(name or f"Afruz {kind.replace('_', ' ')}"),
+        str(name or f"DIFFRUX {kind.replace('_', ' ')}"),
         str(
             engine_mapping.get("version")
             or payload.get("engine_version")

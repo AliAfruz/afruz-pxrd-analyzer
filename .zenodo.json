@@ -1,6 +1,6 @@
 {
-  "title": "Afruz PXRD Analyzer",
-  "description": "A Windows-focused Python and PySide6 workbench for powder X-ray diffraction import, preprocessing, peak analysis, Pawley and Le Bail whole-pattern extraction, Rietveld refinement, quantitative phase analysis, validation, doping-series comparison, reproducible export, and crystallographic visualization.",
+  "title": "DIFFRUX: A Scientific Workbench for Powder X-ray Diffraction and Crystal Visualization",
+  "description": "DIFFRUX (formerly Afruz PXRD Analyzer) is a Windows-focused Python and PySide6 workbench for powder X-ray diffraction import, preprocessing, peak analysis, Pawley and Le Bail whole-pattern extraction, Rietveld refinement, candidate queues, shared background correction, validation, doping-series comparison, reproducible export, and CPU/GPU crystallographic visualization with editable Blender export.",
   "upload_type": "software",
   "creators": [
     {
@@ -11,11 +11,12 @@
     },
     {
       "name": "Kaffash Jamshid, Maryam",
+      "affiliation": "Payame Noor University",
       "type": "ProjectMember"
     }
   ],
-  "version": "23.0.0",
-  "publication_date": "2026-10-03",
+  "version": "23.6.0",
+  "publication_date": "2026-10-16",
   "access_right": "open",
   "license": "mit",
   "language": "eng",

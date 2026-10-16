@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: >-
-  If you use Afruz PXRD Analyzer in published work, cite this software release
+  If you use DIFFRUX (formerly Afruz PXRD Analyzer) in published work, cite the exact software version
   and the primary methodological references for the refinement methods used.
-title: Afruz PXRD Analyzer
+title: 'DIFFRUX: A Scientific Workbench for Powder X-ray Diffraction and Crystal Visualization'
 type: software
 authors:
   - family-names: Afruz
@@ -11,19 +11,24 @@ authors:
     orcid: https://orcid.org/0000-0002-2969-8428
   - family-names: Kaffash Jamshid
     given-names: Maryam
+    affiliation: Payame Noor University
 contact:
   - family-names: Afruz
     given-names: Ali
     affiliation: University of Mohaghegh Ardabili
     orcid: https://orcid.org/0000-0002-2969-8428
-version: 23.0.0
-doi: 10.5281/zenodo.23119993
-date-released: 2026-10-03
+    email: a.afruz@uma.ac.ir
+version: 23.6.0
+date-released: 2026-10-16
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23119992
+    description: Project concept DOI; the current GitHub snapshot is not a new Zenodo deposit.
 license: MIT
 repository-code: https://github.com/AliAfruz/afruz-pxrd-analyzer
 url: https://github.com/AliAfruz/afruz-pxrd-analyzer
 abstract: >-
-  A Windows-focused Python and PySide6 workbench for powder X-ray diffraction
+  DIFFRUX is a Windows-focused Python and PySide6 workbench for powder X-ray diffraction
   import, preprocessing, peak analysis, Pawley and Le Bail whole-pattern
   extraction, Rietveld refinement, quantitative phase analysis, validation,
   doping-series comparison, reproducible export, and crystallographic

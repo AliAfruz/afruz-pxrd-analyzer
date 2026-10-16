@@ -42,7 +42,7 @@ from .sequential_refinement_workspace import SequentialRefinementWorkspace
 from .text_export import write_table_txt
 from .whole_pattern_widget import WholePatternRefinementWidget
 from .widgets import NoWheelDoubleSpinBox
-from .version import APP_VERSION
+from .version import APP_RELEASE, APP_NAME
 
 
 class _InvestigationMainWindowProxy:
@@ -669,7 +669,7 @@ class SequentialRefinementStudioDialog(QDialog):
         super().__init__(parent if isinstance(parent, QWidget) else None)
         self.refinement_widget = workspace
         self.has_been_shown = False
-        self.setWindowTitle(f"Step-wise Refinement Studio — Afruz PXRD {APP_VERSION}")
+        self.setWindowTitle(f"Step-wise Refinement Studio — {APP_RELEASE}")
         self.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.WindowSystemMenuHint
                             | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
         self.setModal(False)
@@ -802,7 +802,7 @@ class ExclusionRefinementHubWidget(QWidget):
         dialog = self._dialogs.get(key)
         if dialog is None:
             widget = self._create_widget(key)
-            title = f"{self.METHODS[key]} - Phase-Exclusion Investigation - Afruz PXRD"
+            title = f"{self.METHODS[key]} - Phase-Exclusion Investigation - {APP_NAME}"
             dialog = ExclusionRefinementDialog(widget, title, self.main_window)
             cinematic_ui = getattr(self.main_window, "cinematic_ui", None)
             if cinematic_ui is not None:

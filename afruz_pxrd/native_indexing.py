@@ -624,7 +624,7 @@ def _candidate_from_details(
         math.sqrt(np.mean([row["delta_two_theta_deg"] ** 2 for row in assignments]))
     ) if assignments else math.inf
     candidate = {
-        "engine": "Afruz native powder indexer",
+        "engine": "DIFFRUX native powder indexer",
         "algorithm": "deep Q-space assignment + weighted SVD reciprocal metric + robust angular refinement + bootstrap reliability screen",
         "bravais_name": bravais_name,
         "crystal_system": CRYSTAL_SYSTEM_BY_BRAVAIS[bravais_name],
@@ -657,7 +657,7 @@ def _candidate_from_details(
         "assignments": assignments,
         "reduced_cell_fingerprint": list(_reduced_cell_fingerprint(cell)),
         "figure_of_merit_warning": (
-            "M20 and F20 are Afruz diagnostic implementations for candidate ranking. "
+            "M20 and F20 are DIFFRUX diagnostic implementations for candidate ranking. "
             "Final indexing must be verified by whole-pattern decomposition and competing-cell tests."
         ),
     }
@@ -1088,7 +1088,7 @@ def run_native_indexing(
     request_path = work / "native_indexing_request.json"
     result_path = work / "native_indexing_result.json"
     request = {
-        "engine": "Afruz native powder indexer",
+        "engine": "DIFFRUX native powder indexer",
         "created_utc": _utc_now(),
         "settings": asdict(settings),
         "peaks": [asdict(row) for row in observations],
@@ -1114,7 +1114,7 @@ def run_native_indexing(
         attempts.append(attempt)
         all_candidates.extend(attempt.get("candidates", []))
         _atomic_write_json(work / "native_indexing_progress.json", {
-            "engine": "Afruz native powder indexer",
+            "engine": "DIFFRUX native powder indexer",
             "completed_lattices": lattice_index,
             "total_lattices": len(settings.bravais_names),
             "attempts": attempts,
@@ -1297,7 +1297,7 @@ def run_native_indexing(
             candidate["chemistry_status"] = "Not assessed"
     result = {
         "success": bool(candidates),
-        "engine": "Afruz native powder indexer",
+        "engine": "DIFFRUX native powder indexer",
         "classification": "Native candidate-cell search",
         "created_utc": _utc_now(),
         "elapsed_seconds": float(time.monotonic() - start),
@@ -1324,7 +1324,7 @@ def run_native_indexing(
 
 def native_indexer_fingerprint() -> str:
     payload = {
-        "engine": "Afruz native powder indexer",
+        "engine": "DIFFRUX native powder indexer",
         "version": 3,
         "bravais": BRAVAIS_NAMES,
         "algorithm": "deep Q-space assignment + weighted SVD reciprocal metric + robust angular refinement + bootstrap reliability screen",

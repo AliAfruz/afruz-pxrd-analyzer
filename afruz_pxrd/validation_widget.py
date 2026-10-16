@@ -210,7 +210,7 @@ class ValidationCampaignWidget(QWidget):
         form = QFormLayout(content)
         form.setSizeConstraint(QLayout.SizeConstraint.SetNoConstraint)
 
-        self.campaign_name = QLineEdit("Afruz QPA validation campaign")
+        self.campaign_name = QLineEdit("DIFFRUX QPA validation campaign")
         self.minimum_records = NoWheelSpinBox()
         self.minimum_records.setRange(2, 10000)
         self.minimum_records.setValue(6)
@@ -570,7 +570,7 @@ class ValidationCampaignWidget(QWidget):
             ]
             self.result = analyze_validation_campaign(
                 self.records,
-                campaign_name=self.campaign_name.text().strip() or "Afruz QPA validation campaign",
+                campaign_name=self.campaign_name.text().strip() or "DIFFRUX QPA validation campaign",
                 thresholds=self._thresholds(),
                 audit_results=self.audit_results,
                 robustness_results=self.robustness_results,
@@ -786,7 +786,7 @@ class ValidationCampaignWidget(QWidget):
         self.audit_results = deepcopy(state.get("audit_results", []))
         self.robustness_runs = deepcopy(state.get("robustness_runs", []))
         self.robustness_results = deepcopy(state.get("robustness_results", []))
-        self.campaign_name.setText(state.get("campaign_name", "Afruz QPA validation campaign"))
+        self.campaign_name.setText(state.get("campaign_name", "DIFFRUX QPA validation campaign"))
         thresholds = state.get("thresholds", {})
         self.minimum_records.setValue(thresholds.get("minimum_records", 6))
         self.maximum_mae.setValue(thresholds.get("maximum_mae_wt_percent", 3.0))

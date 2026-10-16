@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "afruz-pxrd-analyzer"
 dynamic = ["version"]
-description = "Desktop workbench for powder X-ray diffraction analysis and refinement"
+description = "DIFFRUX: a desktop workbench for powder X-ray diffraction analysis and refinement"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = "MIT"
@@ -66,6 +66,7 @@ test = [
 ]
 
 [project.gui-scripts]
+diffrux = "afruz_pxrd.app:run"
 afruz-pxrd = "afruz_pxrd.app:run"
 
 [tool.setuptools.dynamic]

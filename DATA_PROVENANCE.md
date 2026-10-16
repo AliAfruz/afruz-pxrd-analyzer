@@ -35,3 +35,17 @@ directly from CCDC and accept the applicable access terms. See
 No private experimental PXRD data, local refinement result, unpublished project
 file, or user-specific Crystal Studio export is included in this release
 candidate.
+
+## DIFFRUX public figures
+
+`docs/figures` contains renderer/refiner outputs from project-generated NaCl
+fixtures. `tools/generate_gallery.py` rebuilds the generated figures and preserves
+the user-selected `nacl-polyhedra.png` unchanged from a saved synthetic 23.5.0
+Rietveld visualization. Its portable scene retains the fitted cell and fixed CIF
+sites. `gallery-manifest.json` records input/image hashes, geometry and settings.
+The branding banner is code-generated typography plus a NaCl renderer output.
+The plot is based on the bundled synthetic raw-count data, not an experimental
+measurement. The gallery contains no pore-sphere figure; display conventions and
+the distinction between the saved Rietveld scene and the new Le Bail plot are labelled.
+These project-generated figure assets are covered by the MIT License. No
+third-party CSD structure or private CIF/profile is included.

@@ -178,7 +178,7 @@ def compute_hill_howard_qpa(
     *,
     scale_covariance: list[list[float]] | np.ndarray | None = None,
     scale_standard_errors: list[float | None] | None = None,
-    engine: str = "Afruz native preview",
+    engine: str = "DIFFRUX native preview",
     internal_standard_phase: str | None = None,
     internal_standard_known_wt_percent: float | None = None,
 ) -> dict:
@@ -299,7 +299,7 @@ def compute_hill_howard_qpa(
     for audit in audits:
         warnings.extend(f"{audit['phase_name']}: {warning}" for warning in audit["warnings"])
     warnings.append(
-        "Native Afruz scale factors require certified-mixture recovery and independent "
+        "Native DIFFRUX scale factors require certified-mixture recovery and independent "
         "experimental validation before publication use."
     )
 

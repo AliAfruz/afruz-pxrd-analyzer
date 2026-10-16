@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Reliable, human-readable TXT exports for Afruz PXRD Analyzer.
+"""Reliable, human-readable TXT exports for DIFFRUX.
 
 All tabular files use UTF-8, LF line endings and one TAB between columns.
 Writes are atomic: a temporary file is completed and fsynced before it replaces
@@ -20,6 +20,7 @@ import re
 import shutil
 import tempfile
 from typing import Any
+from .version import APP_NAME
 
 try:
     import numpy as np
@@ -150,7 +151,7 @@ def _metadata_lines(
     metadata: Mapping[str, Any] | None,
 ) -> list[str]:
     lines = [
-        "# Afruz PXRD Analyzer clean text export",
+        f"# {APP_NAME} clean text export",
         f"# text_schema_version: {TEXT_EXPORT_SCHEMA_VERSION}",
         f"# title: {clean_cell(title)}",
         f"# created_utc: {utc_timestamp()}",
@@ -171,7 +172,7 @@ def write_table_txt(
     rows: Iterable[Mapping[str, Any]],
     *,
     columns: Sequence[str] | None = None,
-    title: str = "Afruz table export",
+    title: str = f"{APP_NAME} table export",
     metadata: Mapping[str, Any] | None = None,
     backup: bool = True,
 ) -> dict[str, Any]:
@@ -213,7 +214,7 @@ def write_columns_txt(
     path: str | Path,
     columns: Mapping[str, Sequence[Any]],
     *,
-    title: str = "Afruz profile export",
+    title: str = f"{APP_NAME} profile export",
     metadata: Mapping[str, Any] | None = None,
     backup: bool = True,
 ) -> dict[str, Any]:
@@ -257,7 +258,7 @@ def write_mapping_txt(
     path: str | Path,
     mapping: Mapping[str, Any] | Any,
     *,
-    title: str = "Afruz result record",
+    title: str = f"{APP_NAME} result record",
     metadata: Mapping[str, Any] | None = None,
     backup: bool = True,
 ) -> dict[str, Any]:
@@ -277,7 +278,7 @@ def write_manifest_txt(
     files: Iterable[str | Path],
     *,
     root: str | Path | None = None,
-    title: str = "Afruz export manifest",
+    title: str = f"{APP_NAME} export manifest",
     backup: bool = True,
 ) -> dict[str, Any]:
     base = Path(root).resolve() if root is not None else None

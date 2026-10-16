@@ -144,7 +144,7 @@ class ExportCenterDialog(QDialog):
         project_name = (
             self.main_window.current_project.stem
             if getattr(self.main_window, "current_project", None)
-            else "Afruz_PXRD_Data"
+            else "DIFFRUX_Data"
         )
         self.base_name_edit.setText(safe_filename(project_name))
         options_layout.addWidget(QLabel("Scope"), 0, 0)
@@ -333,7 +333,7 @@ class ExportCenterDialog(QDialog):
         except Exception as exc:
             QMessageBox.critical(self, "Output folder unavailable", str(exc))
             return
-        base_name = safe_filename(self.base_name_edit.text(), "Afruz_PXRD_Data")
+        base_name = safe_filename(self.base_name_edit.text(), "DIFFRUX_Data")
 
         self.thread = QThread(self)
         self.worker = ExportWorker(

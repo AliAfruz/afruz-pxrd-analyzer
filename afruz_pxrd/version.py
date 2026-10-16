@@ -1,4 +1,4 @@
-"""Authoritative Afruz PXRD release identity.
+"""Authoritative DIFFRUX release identity.
 
 Every user-visible version and exported software-version field must be derived
 from this module.  Schema versions remain local to their respective formats.
@@ -7,8 +7,8 @@ from this module.  Schema versions remain local to their respective formats.
 from __future__ import annotations
 
 
-APP_NAME = "Afruz PXRD Analyzer"
-APP_VERSION = "23.5.1"
+APP_NAME = "DIFFRUX"
+APP_VERSION = "23.6.0"
 APP_WINDOW_TITLE = f"{APP_NAME} — {APP_VERSION}"
 APP_RELEASE = f"{APP_NAME} {APP_VERSION}"
 

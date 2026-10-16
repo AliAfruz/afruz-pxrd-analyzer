@@ -19,7 +19,7 @@ import numpy as np
 
 from .metrology import EvidenceClass
 from .text_export import write_mapping_txt, write_table_txt, write_manifest_txt
-from .version import APP_RELEASE, APP_VERSION
+from .version import APP_NAME, APP_RELEASE, APP_VERSION
 from scipy import stats
 
 
@@ -322,7 +322,7 @@ def _campaign_status(overall: dict, thresholds: dict, record_errors: list[str]) 
 def analyze_validation_campaign(
     records: list[dict],
     *,
-    campaign_name: str = "Afruz QPA validation campaign",
+    campaign_name: str = "DIFFRUX QPA validation campaign",
     thresholds: dict | None = None,
     audit_results: list[dict] | None = None,
     robustness_results: list[dict] | None = None,
@@ -717,7 +717,7 @@ def export_reproducibility_package(
     write_mapping_txt(
         work / "validation_campaign.txt",
         campaign_result,
-        title="Afruz validation campaign complete result",
+        title=f"{APP_NAME} validation campaign complete result",
         backup=False,
     )
     _write_csv(work / "validation_records.csv", campaign_result.get("records", []))
@@ -738,7 +738,7 @@ def export_reproducibility_package(
     (work / "validation_report.html").write_text(_render_html_report(campaign_result), encoding="utf-8")
 
     environment = {
-        "software": "Afruz PXRD Analyzer",
+        "software": APP_NAME,
         "software_version": software_version,
         "python_version": sys.version,
         "platform": platform.platform(),

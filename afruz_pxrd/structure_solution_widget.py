@@ -1070,7 +1070,7 @@ class StructureSolutionPathwayWidget(QWidget):
         return build_p1_provisional_cif(
             candidate,
             atoms,
-            title="Afruz unknown-phase provisional structure",
+            title="DIFFRUX unknown-phase provisional structure",
             formula=self.formula.text().strip(),
             proposed_space_group=self.proposed_space_group.currentText(),
             provenance=self.provenance.text().strip(),

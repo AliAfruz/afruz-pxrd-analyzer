@@ -18,6 +18,7 @@ import numpy as np
 from scipy.spatial import ConvexHull, QhullError, cKDTree
 
 from .crystallography import ATOMIC_NUMBER, direct_metric_tensor
+from .version import APP_NAME
 from .structure_validation import (
     COVALENT_RADII as VALIDATED_COVALENT_RADII,
     METALS as VALIDATED_METALS,
@@ -1599,7 +1600,7 @@ def scene_document(scene: CrystalScene, width: int, height: int, dpi: int) -> di
 def load_scene_document(path: str | Path) -> tuple[dict, RenderSettings]:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
     if value.get("schema") != "afruz.crystal-scene.v1":
-        raise CrystalSceneError("This is not an Afruz Crystal Studio scene file.")
+        raise CrystalSceneError(f"This is not a {APP_NAME} / legacy Afruz Crystal Studio scene file.")
     settings = dict(value["settings"])
     if settings.get("style") == LEGACY_MOF_PORE_STYLE:
         settings["style"] = MOF_PORE_STYLE

@@ -1,4 +1,31 @@
-# Release audit — version 23.0.0
+# Release audit
+
+## DIFFRUX 23.6.0 — GitHub source update, 2026-10-16
+
+- Application identity: DIFFRUX (formerly Afruz PXRD Analyzer).
+- Interpreter: CPython 3.12.14; Qt/PySide6 6.11.1; Windows offscreen tests.
+- Complete current suite: **352 passed in 523.20 s**, with no failures or skips.
+- After replacing the gallery's orange-pore image with Ali Afruz's selected NaCl
+  polyhedra image, all six gallery/branding tests were rerun: **6 passed in 0.66 s**.
+- A real CUDA smoke test and the large Le Bail CPU/CUDA parity check ran on an
+  NVIDIA GeForce RTX 4060 Laptop GPU. The parity test asserts actual GPU use when
+  CUDA is available; CPU-only installations retain the tested fallback.
+- Regular/step-wise refiners, shared backgrounds, exclusions, AFZ recovery,
+  typed results, rendering, editable GLB export and numerical baselines are covered.
+- NaCl Le Bail demonstration: Rwp approximately 6.11% with the recorded TCH
+  settings and supplied uncertainties. This is a synthetic fixture result, not
+  a promise about experimental data or independent scientific validation.
+- Public figures use project-generated NaCl inputs. The selected original PNG
+  SHA-256 is `2d14c7212457546defbeda21ff5ec994d0c14ec1c35cf1d247803a8a3a015eaa`.
+  Its sidecar uses a portable source path and preserves the historical fitted cell.
+- No pore-sphere figure, private measurement, user project, manuscript package,
+  third-party CSD CIF, environment, cache or local backup is added to GitHub.
+- Existing `.afz` files, scene schemas, settings/cache keys, import/distribution
+  names and legacy launch commands are retained. The `diffrux` command is an alias.
+- Updating GitHub does not change the historical Zenodo 23.0.0 archive or create
+  a new DOI. Citation metadata distinguish the project concept DOI from that archive.
+
+## Historical release audit — version 23.0.0
 
 - Release candidate date: 2026-10-03
 - Supported interpreter: CPython 3.12

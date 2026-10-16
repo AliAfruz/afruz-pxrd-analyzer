@@ -773,7 +773,7 @@ def format_crystal_chemistry_report(report: dict) -> str:
     groups = report["functional_group_screen"]
     symmetry = report["symmetry_screen"]
     lines = [
-        "AFRUZ CRYSTAL CHEMISTRY QA",
+        "DIFFRUX CRYSTAL CHEMISTRY QA",
         "=" * 78,
         f"Structure: {summary['structure_name']}",
         f"Status: {summary['status'].upper()}",

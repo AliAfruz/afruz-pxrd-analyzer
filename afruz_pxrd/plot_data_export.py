@@ -10,6 +10,7 @@ import re
 import zipfile
 from typing import Any
 from xml.sax.saxutils import escape
+from .version import APP_NAME
 
 try:
     import numpy as np
@@ -514,8 +515,8 @@ def _core_xml() -> str:
         '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
         'xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" '
         'xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
-        '<dc:creator>Afruz PXRD Analyzer</dc:creator>'
-        '<dc:title>Afruz PXRD plot data export</dc:title>'
+        f'<dc:creator>{escape(APP_NAME)}</dc:creator>'
+        f'<dc:title>{escape(APP_NAME)} plot data export</dc:title>'
         f'<dcterms:created xsi:type="dcterms:W3CDTF">{now}</dcterms:created>'
         f'<dcterms:modified xsi:type="dcterms:W3CDTF">{now}</dcterms:modified>'
         '</cp:coreProperties>'
@@ -527,7 +528,7 @@ def _app_xml(sheet_count: int) -> str:
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" '
         'xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">'
-        '<Application>Afruz PXRD Analyzer</Application>'
+        f'<Application>{escape(APP_NAME)}</Application>'
         f'<Worksheets>{sheet_count}</Worksheets>'
         '</Properties>'
     )

@@ -11,7 +11,7 @@ import pandas as pd
 
 from .batch_engine import comparison_rows
 from .text_export import write_mapping_txt, write_table_txt, write_manifest_txt
-from .version import APP_RELEASE, APP_VERSION
+from .version import APP_NAME, APP_RELEASE, APP_VERSION
 
 
 def _safe_filename(text: str) -> str:
@@ -245,7 +245,7 @@ def _make_comparison_figure(batch_result: dict, output_path: Path) -> None:
         axis.set_xticks(x)
         axis.set_xticklabels(frame["dataset_name"], rotation=35, ha="right")
         axis.set_ylabel(label)
-        axis.set_title("Afruz PXRD batch comparison")
+        axis.set_title(f"{APP_NAME} batch comparison")
         axis.grid(True, alpha=0.25)
     figure.tight_layout()
     figure.savefig(output_path, dpi=180)
@@ -609,9 +609,9 @@ def export_batch_bundle(
     error_frame = _error_dataframe(batch_result)
     _comparison_dataframe(batch_result).to_csv(paths["summary_csv"], index=False)
     _error_dataframe(batch_result).to_csv(paths["errors_csv"], index=False)
-    write_mapping_txt(paths["result_txt"], batch_result, title="Afruz batch complete result", backup=False)
-    write_table_txt(paths["summary_txt"], comparison_frame.to_dict("records"), title="Afruz batch comparison summary", backup=False)
-    write_table_txt(paths["errors_txt"], error_frame.to_dict("records"), title="Afruz batch warnings and errors", backup=False)
+    write_mapping_txt(paths["result_txt"], batch_result, title=f"{APP_NAME} batch complete result", backup=False)
+    write_table_txt(paths["summary_txt"], comparison_frame.to_dict("records"), title=f"{APP_NAME} batch comparison summary", backup=False)
+    write_table_txt(paths["errors_txt"], error_frame.to_dict("records"), title=f"{APP_NAME} batch warnings and errors", backup=False)
     _make_comparison_figure(batch_result, paths["comparison_png"])
     _make_overlay_figure(batch_result, paths["overlay_png"])
     _make_overlay_figure(batch_result, paths["overlay_svg"], svg=True)
@@ -633,7 +633,7 @@ def export_batch_bundle(
         paths["manifest_txt"],
         [path for key, path in paths.items() if key != "manifest_txt"],
         root=output_directory,
-        title="Afruz batch export manifest",
+        title=f"{APP_NAME} batch export manifest",
         backup=False,
     )
     return {name: str(path) for name, path in paths.items()}

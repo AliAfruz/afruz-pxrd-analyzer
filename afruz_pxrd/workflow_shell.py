@@ -835,7 +835,7 @@ class ProjectHomeWidget(QWidget):
         command_hint.setObjectName("commandKeycap")
         quick_heading.addWidget(command_hint)
         quick_layout.addLayout(quick_heading)
-        quick_note = QLabel("Begin with measured data or continue an existing project. Afruz keeps the recommended scientific route visible as you work.")
+        quick_note = QLabel("Begin with measured data or continue an existing project. DIFFRUX keeps the recommended scientific route visible as you work.")
         quick_note.setObjectName("mutedLabel")
         quick_note.setWordWrap(True)
         quick_layout.addWidget(quick_note)

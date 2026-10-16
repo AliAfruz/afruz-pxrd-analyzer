@@ -27,6 +27,7 @@ from .crystal_scene import (
     element_color,
     scene_document,
 )
+from .version import APP_NAME
 
 
 def gpu_renderer_status() -> tuple[bool, str]:
@@ -278,7 +279,7 @@ class GpuCrystalViewDialog(QDialog):
         self._scene = scene
         self._model_export_dialogs = []
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowTitle("GPU Interactive Crystal — Afruz PXRD")
+        self.setWindowTitle(f"GPU Interactive Crystal — {APP_NAME}")
         self.resize(1180, 820)
         self.setMinimumSize(680, 500)
         layout = QVBoxLayout(self)

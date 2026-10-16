@@ -87,7 +87,7 @@ class PhaseRevolutionWidget(QWidget):
 
         intro = QLabel(
             "Subtract verified known-phase models, curate the unexplained reflections, "
-            "search candidate unit cells with the built-in Afruz native indexer, test chemical plausibility, "
+            "search candidate unit cells with the built-in DIFFRUX native indexer, test chemical plausibility, "
             "and transfer a selected indexed cell to Phase 10 for Pawley/Le Bail confirmation."
         )
         intro.setWordWrap(True)
@@ -108,7 +108,7 @@ class PhaseRevolutionWidget(QWidget):
         actions = QHBoxLayout()
         self.residual_button = QPushButton("Create unknown residual")
         self.detect_button = QPushButton("Detect unknown peaks")
-        self.index_button = QPushButton("Run native Afruz indexing")
+        self.index_button = QPushButton("Run native DIFFRUX indexing")
         self.index_button.setObjectName("primaryButton")
         self.cancel_button = QPushButton("Cancel indexing")
         self.cancel_button.setEnabled(False)
@@ -319,12 +319,12 @@ class PhaseRevolutionWidget(QWidget):
         form.addRow("Known-overlap exclusion (°)", self.overlap_exclusion)
         form.addRow("Maximum peaks", self.maximum_peaks)
 
-        separator = QLabel("Afruz native indexing")
+        separator = QLabel("DIFFRUX native indexing")
         separator.setObjectName("sectionTitle")
         form.addRow(separator)
 
         native_note = QLabel(
-            "Runs entirely inside Afruz with NumPy/SciPy. No external program, "
+            "Runs entirely inside DIFFRUX with NumPy/SciPy. No external program, "
             "Python environment, executable, instrument file, or native DLL is required."
         )
         native_note.setWordWrap(True)
@@ -1317,12 +1317,12 @@ class PhaseRevolutionWidget(QWidget):
                 "phase",
                 uid,
                 {"indexing": result, "candidate_cells": candidates},
-                reason="Completed native Afruz indexing",
+                reason="Completed native DIFFRUX indexing",
             )
         self.populate_candidates(candidates)
         if candidates:
             self._set_status(
-                f"Native Afruz indexing returned {len(candidates)} candidate cells. "
+                f"Native DIFFRUX indexing returned {len(candidates)} candidate cells. "
                 "Verify several candidates with Pawley/Le Bail refinement."
             )
         else:
@@ -1335,7 +1335,7 @@ class PhaseRevolutionWidget(QWidget):
 
     def _indexing_failed(self, traceback_text):
         work = self.work_directory.text().strip()
-        summary = "Native Afruz indexing failed. Open Details for the exact numerical error."
+        summary = "Native DIFFRUX indexing failed. Open Details for the exact numerical error."
         self._set_status(summary)
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Critical)
@@ -1423,7 +1423,7 @@ class PhaseRevolutionWidget(QWidget):
                 self,
                 "Peak-list revision mismatch",
                 "The master reflection list changed after this candidate was indexed. "
-                "Run native Afruz indexing again before handoff.",
+                "Run native DIFFRUX indexing again before handoff.",
             )
             return
         master_peaks = self.master_peak_list(dataset.uid)

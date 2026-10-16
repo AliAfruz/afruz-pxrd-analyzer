@@ -62,4 +62,4 @@ def test_runtime_versions_match_the_lock(project_root: Path):
 
 
 def test_package_version_is_preserved():
-    assert afruz_pxrd.__version__ == "23.5.1"
+    assert afruz_pxrd.__version__ == "23.6.0"

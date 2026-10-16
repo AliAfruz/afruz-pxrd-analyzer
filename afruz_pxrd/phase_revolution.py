@@ -727,7 +727,7 @@ def build_indexing_request(
     directory = Path(work_directory).expanduser().resolve()
     directory.mkdir(parents=True, exist_ok=True)
     request = {
-        "engine": "Afruz native powder indexer",
+        "engine": "DIFFRUX native powder indexer",
         "peaks": normalize_master_peak_list(peaks),
         "settings": deepcopy(settings),
     }

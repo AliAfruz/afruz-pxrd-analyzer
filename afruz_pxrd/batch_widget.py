@@ -244,7 +244,7 @@ class BatchWorkflowWidget(QWidget):
         layout = QVBoxLayout(page)
 
         controls = QHBoxLayout()
-        self.recipe_name = QLineEdit("Afruz shared batch recipe")
+        self.recipe_name = QLineEdit("DIFFRUX shared batch recipe")
         self.capture_recipe_button = QPushButton("Capture current controls")
         self.save_recipe_button = QPushButton("Save recipe JSON")
         self.load_recipe_button = QPushButton("Load recipe JSON")
@@ -705,7 +705,7 @@ class BatchWorkflowWidget(QWidget):
     def _recipe_name_changed(self):
         self.recipe["name"] = (
             self.recipe_name.text().strip()
-            or "Afruz shared batch recipe"
+            or "DIFFRUX shared batch recipe"
         )
         self._update_recipe_preview()
 

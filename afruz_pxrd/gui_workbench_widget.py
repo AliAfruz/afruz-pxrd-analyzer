@@ -41,7 +41,7 @@ class FullGuiWorkbenchWidget(QWidget):
         layout.addWidget(heading)
 
         description = QLabel(
-            "All major Afruz engines are now reachable from the GUI: import, preparation, "
+            "All major DIFFRUX engines are now reachable from the GUI: import, preparation, "
             "peak curation, unknown indexing, CIF library matching, structure solving, "
             "Pawley/Le Bail, Rietveld, intelligent multiphase refinement, QPA, validation, "
             "batch processing and complete reports."

@@ -1,0 +1,224 @@
+{
+  "software": "DIFFRUX 23.6.0",
+  "license": "MIT",
+  "conventions": "CIF-derived coordinates; orthographic projection; illustrative radii/colors; no AI-generated scientific geometry.",
+  "figures": [
+    {
+      "file": "nacl-crystal.png",
+      "source": "Afruz_PXRD_Statistical_Validation_Set/NaCl_validation_P1.cif",
+      "status": "Idealized NaCl rock-salt fixture; reference geometry, not a refinement result.",
+      "geometry": {
+        "displayed_atoms": 27,
+        "primary_atoms": 27,
+        "periodic_helper_atoms": 0,
+        "displayed_contacts": 54,
+        "displayed_hydrogen_bonds": 0,
+        "displayed_polyhedron_faces": 8,
+        "displayed_pore_envelopes": 0,
+        "pore_envelope_radii_angstrom": []
+      },
+      "settings": {
+        "style": "Scientific • polyhedra + H-bonds",
+        "repeats": [
+          1,
+          1,
+          1
+        ],
+        "azimuth": 33,
+        "elevation": 23,
+        "zoom": 1.0,
+        "atom_scale": 1.05,
+        "atom_opacity": 1.0,
+        "bond_radius": 0.06,
+        "contact_cutoff": 0.0,
+        "bonds": true,
+        "unlike_only": true,
+        "polyhedra": true,
+        "center_element": "Cl",
+        "polyhedron_opacity": 0.16,
+        "polyhedron_edges": true,
+        "hydrogen_bonds": false,
+        "complete_boundaries": false,
+        "metal_metal_bonds": false,
+        "cell_edges": true,
+        "cell_grid": false,
+        "axes": true,
+        "labels": false,
+        "caption": true,
+        "transparent": false,
+        "hide_hydrogen": false,
+        "pore_volumes": false,
+        "pore_probe_radius": 0.0,
+        "pore_opacity": 0.88,
+        "pore_max_count": 2,
+        "isolate_pore": false,
+        "smart_pore_isolation": true,
+        "isolated_pore_index": 0,
+        "pore_shell_thickness": 8.0
+      },
+      "sha256": "1f7e9ae96964bf8c74bdd2ed83f7031baebe078b02d31cd9b3e199bed5952fb0",
+      "source_sha256": "a53934be5787408b7864dd5ecb544a4deba648c9b5d45f26a23181ca67bf7765"
+    },
+    {
+      "file": "nacl-polyhedra.png",
+      "source": "docs/figures/nacl-polyhedra.crystal.json",
+      "status": "User-selected original NaCl Rietveld visualization from 23.5.0. Saved synthetic fitted cell; CIF fractional coordinates/occupancies remain fixed. Distinct run from the Le Bail plot. PNG preserved byte-for-byte.",
+      "original_sha256": "2d14c7212457546defbeda21ff5ec994d0c14ec1c35cf1d247803a8a3a015eaa",
+      "geometry": {
+        "displayed_atoms": 81,
+        "primary_atoms": 27,
+        "periodic_helper_atoms": 54,
+        "displayed_contacts": 108,
+        "displayed_hydrogen_bonds": 0,
+        "displayed_polyhedron_faces": 112,
+        "displayed_pore_envelopes": 0,
+        "pore_envelope_radii_angstrom": []
+      },
+      "settings": {
+        "style": "Scientific • polyhedra + H-bonds",
+        "repeats": [
+          1,
+          1,
+          1
+        ],
+        "azimuth": 32.0,
+        "elevation": 19.0,
+        "zoom": 0.94,
+        "atom_scale": 0.78,
+        "atom_opacity": 1.0,
+        "bond_radius": 0.035,
+        "contact_cutoff": 0.0,
+        "bonds": true,
+        "unlike_only": true,
+        "polyhedra": true,
+        "center_element": "All metals",
+        "polyhedron_opacity": 0.4,
+        "polyhedron_edges": true,
+        "hydrogen_bonds": true,
+        "complete_boundaries": true,
+        "metal_metal_bonds": true,
+        "cell_edges": true,
+        "cell_grid": true,
+        "axes": true,
+        "labels": true,
+        "caption": true,
+        "transparent": false,
+        "hide_hydrogen": false,
+        "pore_volumes": false,
+        "pore_probe_radius": 0.0,
+        "pore_opacity": 0.88,
+        "pore_max_count": 2,
+        "isolate_pore": false,
+        "smart_pore_isolation": true,
+        "isolated_pore_index": 0,
+        "pore_shell_thickness": 8.0
+      },
+      "sha256": "2d14c7212457546defbeda21ff5ec994d0c14ec1c35cf1d247803a8a3a015eaa",
+      "source_sha256": "aa849ec38f12a8d054f491cafd672950e3954db8057b51252d254879f3553926"
+    },
+    {
+      "file": "diffrux-hero.png",
+      "source": "Afruz_PXRD_Statistical_Validation_Set/NaCl_validation_P1.cif",
+      "status": "DIFFRUX branding; idealized NaCl, exact renderer geometry; atom display sizes illustrative.",
+      "sha256": "ae156060ffbe08b63d8d44009f6948ad14c19bdf2dddd902184913d2cbfd415d",
+      "source_sha256": "a53934be5787408b7864dd5ecb544a4deba648c9b5d45f26a23181ca67bf7765"
+    },
+    {
+      "file": "nacl-le-bail.png",
+      "source": "Afruz_PXRD_Statistical_Validation_Set/01_NaCl_raw_counts_with_sigma.txt",
+      "status": "Synthetic software regression demonstration; not experimental ground truth.",
+      "rwp_percent": 6.109146148049225,
+      "refined_cell": {
+        "a": 5.640105087206686,
+        "b": 5.640105087206686,
+        "c": 5.640105087206686,
+        "alpha": 90.0,
+        "beta": 90.0,
+        "gamma": 90.0
+      },
+      "extraction": {
+        "algorithm": "damped Le Bail profile repartition",
+        "algorithm_revision": 2,
+        "initialization": "weighted scale of the sampled reference profile",
+        "repartition_weighting": "unweighted observed-area partition",
+        "negative_net_policy": "signed net counts; nonnegative integrated intensities",
+        "final_background_refitted": true,
+        "final_relative_background_change": 2.868810158702006e-05,
+        "cycles": 12,
+        "final_relative_intensity_change": 3.5347921582804284e-05,
+        "history": [
+          {
+            "cycle": 1,
+            "relative_intensity_change": 0.055959308030777435,
+            "weighted_residual_sum_squares": 1071338.4050909588
+          },
+          {
+            "cycle": 2,
+            "relative_intensity_change": 0.02820315864681927,
+            "weighted_residual_sum_squares": 864320.9142629637
+          },
+          {
+            "cycle": 3,
+            "relative_intensity_change": 0.01414074959680933,
+            "weighted_residual_sum_squares": 810195.7401990436
+          },
+          {
+            "cycle": 4,
+            "relative_intensity_change": 0.007096243613944704,
+            "weighted_residual_sum_squares": 795378.8421361495
+          },
+          {
+            "cycle": 5,
+            "relative_intensity_change": 0.003571293231176614,
+            "weighted_residual_sum_squares": 791054.4871789031
+          },
+          {
+            "cycle": 6,
+            "relative_intensity_change": 0.001802456576522701,
+            "weighted_residual_sum_squares": 789661.3374430658
+          },
+          {
+            "cycle": 7,
+            "relative_intensity_change": 0.0009114225622468927,
+            "weighted_residual_sum_squares": 789138.9458967964
+          },
+          {
+            "cycle": 8,
+            "relative_intensity_change": 0.0004612632909609556,
+            "weighted_residual_sum_squares": 788899.6878481279
+          },
+          {
+            "cycle": 9,
+            "relative_intensity_change": 0.00023379684077833528,
+            "weighted_residual_sum_squares": 788765.7613531183
+          },
+          {
+            "cycle": 10,
+            "relative_intensity_change": 0.00011943254865915894,
+            "weighted_residual_sum_squares": 788678.7510290606
+          },
+          {
+            "cycle": 11,
+            "relative_intensity_change": 6.273992438175621e-05,
+            "weighted_residual_sum_squares": 788617.0720890614
+          },
+          {
+            "cycle": 12,
+            "relative_intensity_change": 3.5347921582804284e-05,
+            "weighted_residual_sum_squares": 788571.366544079
+          }
+        ],
+        "converged_at_1e-5": false,
+        "acceleration": {
+          "requested": false,
+          "used": false,
+          "backend": "CPU",
+          "device_name": "",
+          "reason": "GPU acceleration is disabled for this run."
+        }
+      },
+      "sha256": "8a8eb6226095f6d8f41bad42299919cbc849b066f54ee5d77640147c61c3fc4e",
+      "source_sha256": "01d687734851d69fbc076e5bb415fec1c63cb8be131fc2b0c0abe76c6eb0d77e"
+    }
+  ]
+}

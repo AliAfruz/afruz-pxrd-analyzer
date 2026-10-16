@@ -87,7 +87,7 @@ class RietveldRefinementWidget(QWidget):
         layout.addWidget(heading)
 
         description = QLabel(
-            "A CIF contains crystal structure information, not a measured detector pattern. Afruz first "
+            "A CIF contains crystal structure information, not a measured detector pattern. DIFFRUX first "
             "calculates the powder reflections and jointly scales the generated phase profiles into the "
             "observed intensity units before refinement. Atomic coordinates and occupancies remain fixed "
             "by default; phase scales, unit cells, "

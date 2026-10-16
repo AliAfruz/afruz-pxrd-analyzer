@@ -15,6 +15,7 @@ from scipy.optimize import linear_sum_assignment
 
 from .cif_library import cell_volume
 from .processing import smart_detect_peaks
+from .version import APP_NAME
 from .rietveld_refinement import RietveldPhaseSpec, refine_rietveld
 from .structure_validation import (
     composition_formula_from_sites,
@@ -748,7 +749,7 @@ def refined_cif_text(
     status = str(validation.get("status") or "Validation unavailable").replace("'", "''")
     readiness = "yes" if gate["publication_ready"] else "no"
     audit_values = {
-        "_audit_creation_method": f"'Afruz PXRD Analyzer {software_version}; Phase 12 doping-series refinement'",
+        "_audit_creation_method": f"'{APP_NAME} {software_version}; Phase 12 doping-series refinement'",
         "_audit_update_record": f"'{str(dataset_name).replace(chr(39), chr(39) * 2)}'",
         "_afruz_global_delta_biso": f"{float(phase_result.get('delta_biso', 0.0)):.10g}",
         "_afruz_pattern_scale_fraction_percent": f"{float(phase_result.get('pattern_scale_fraction_percent', 0.0)):.10g}",
@@ -762,7 +763,7 @@ def refined_cif_text(
     for tag, value in audit_values.items():
         raw = _set_or_insert_cif_value(raw, tag, value)
     return raw + (
-        "\n# Afruz Phase 12 sequential-refinement audit\n"
+        f"\n# {APP_NAME} Phase 12 sequential-refinement audit\n"
         "# Atomic coordinates and occupancies were retained from the input CIF.\n"
         "# Topology-aware plausibility separates bonded 1-3 and D-H...A contacts from true nonbonded overlaps.\n"
         "# A publication_ready=no result is a preserved review model, not a validated crystal structure.\n"

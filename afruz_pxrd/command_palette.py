@@ -115,7 +115,7 @@ class CommandPalette(QDialog):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.setObjectName("commandPalette")
-        self.setWindowTitle("Afruz Command Center")
+        self.setWindowTitle("DIFFRUX Command Center")
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setMinimumSize(650, 500)

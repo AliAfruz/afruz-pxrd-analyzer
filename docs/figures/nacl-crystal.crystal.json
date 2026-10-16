@@ -1,0 +1,182 @@
+{
+  "schema": "afruz.crystal-scene.v1",
+  "model": {
+    "data_name": "NaCl_validation",
+    "formula": "Cl4 Na4",
+    "formula_units_z": 1.0,
+    "formula_weight": 233.76,
+    "space_group": "P 1",
+    "crystal_system": "Cubic",
+    "source_path": "Afruz_PXRD_Statistical_Validation_Set/NaCl_validation_P1.cif",
+    "reported_wavelength_angstrom": null,
+    "intensity_model": "Approximate kinematic structure factors using atomic number, isotropic Debye–Waller attenuation, multiplicity, and Lorentz-polarization weighting (the CIF supplies no Cromer–Mann table).",
+    "xray_scattering_factors": {},
+    "cell": {
+      "a": 5.6402,
+      "b": 5.6402,
+      "c": 5.6402,
+      "alpha": 90.0,
+      "beta": 90.0,
+      "gamma": 90.0
+    },
+    "atoms": [
+      {
+        "label": "Na1",
+        "element": "Na",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "occupancy": 1.0,
+        "b_iso": 0.6
+      },
+      {
+        "label": "Na2",
+        "element": "Na",
+        "x": 0.0,
+        "y": 0.5,
+        "z": 0.5,
+        "occupancy": 1.0,
+        "b_iso": 0.6
+      },
+      {
+        "label": "Na3",
+        "element": "Na",
+        "x": 0.5,
+        "y": 0.0,
+        "z": 0.5,
+        "occupancy": 1.0,
+        "b_iso": 0.6
+      },
+      {
+        "label": "Na4",
+        "element": "Na",
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.0,
+        "occupancy": 1.0,
+        "b_iso": 0.6
+      },
+      {
+        "label": "Cl1",
+        "element": "Cl",
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5,
+        "occupancy": 1.0,
+        "b_iso": 0.55
+      },
+      {
+        "label": "Cl2",
+        "element": "Cl",
+        "x": 0.5,
+        "y": 0.0,
+        "z": 0.0,
+        "occupancy": 1.0,
+        "b_iso": 0.55
+      },
+      {
+        "label": "Cl3",
+        "element": "Cl",
+        "x": 0.0,
+        "y": 0.5,
+        "z": 0.0,
+        "occupancy": 1.0,
+        "b_iso": 0.55
+      },
+      {
+        "label": "Cl4",
+        "element": "Cl",
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.5,
+        "occupancy": 1.0,
+        "b_iso": 0.55
+      }
+    ],
+    "cif_bonds": [],
+    "symmetry_operations": [
+      "x,y,z"
+    ],
+    "raw_cif_text": "data_NaCl_validation\n_chemical_name_common 'NaCl idealized validation phase'\n_audit_creation_method 'Synthetic statistical validation set for Afruz PXRD Analyzer'\n_symmetry_space_group_name_H-M 'P 1'\n_symmetry_Int_Tables_number 1\n_cell_length_a 5.640200\n_cell_length_b 5.640200\n_cell_length_c 5.640200\n_cell_angle_alpha 90.000000\n_cell_angle_beta 90.000000\n_cell_angle_gamma 90.000000\n\nloop_\n_atom_site_label\n_atom_site_type_symbol\n_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\n_atom_site_occupancy\n_atom_site_B_iso_or_equiv\nNa1 Na 0.000000 0.000000 0.000000 1.0000 0.6000\nNa2 Na 0.000000 0.500000 0.500000 1.0000 0.6000\nNa3 Na 0.500000 0.000000 0.500000 1.0000 0.6000\nNa4 Na 0.500000 0.500000 0.000000 1.0000 0.6000\nCl1 Cl 0.500000 0.500000 0.500000 1.0000 0.5500\nCl2 Cl 0.500000 0.000000 0.000000 1.0000 0.5500\nCl3 Cl 0.000000 0.500000 0.000000 1.0000 0.5500\nCl4 Cl 0.000000 0.000000 0.500000 1.0000 0.5500\n",
+    "provenance": {
+      "kind": "cif_reference",
+      "note": "Imported CIF reference; not a refinement result. Display radii are illustrative.",
+      "formula_source": "occupied atom-site cell composition",
+      "validation_status": "Plausibility passed",
+      "validation_score": 100.0,
+      "structure_warnings": [],
+      "structure_validation_counts": {
+        "duplicate_pairs": 0,
+        "severe_contacts": 0,
+        "short_contacts": 0,
+        "vdw_overlaps": 0,
+        "hydrogen_bonds": 0,
+        "topology_excluded": 0
+      },
+      "refinement_allowed": true,
+      "publication_ready": true
+    },
+    "_afruz_formula_source": "occupied atom-site cell composition"
+  },
+  "settings": {
+    "style": "Scientific • polyhedra + H-bonds",
+    "repeats": [
+      1,
+      1,
+      1
+    ],
+    "azimuth": 33,
+    "elevation": 23,
+    "zoom": 1.0,
+    "atom_scale": 1.05,
+    "atom_opacity": 1.0,
+    "bond_radius": 0.06,
+    "contact_cutoff": 0.0,
+    "bonds": true,
+    "unlike_only": true,
+    "polyhedra": true,
+    "center_element": "Cl",
+    "polyhedron_opacity": 0.16,
+    "polyhedron_edges": true,
+    "hydrogen_bonds": false,
+    "complete_boundaries": false,
+    "metal_metal_bonds": false,
+    "cell_edges": true,
+    "cell_grid": false,
+    "axes": true,
+    "labels": false,
+    "caption": true,
+    "transparent": false,
+    "hide_hydrogen": false,
+    "pore_volumes": false,
+    "pore_probe_radius": 0.0,
+    "pore_opacity": 0.88,
+    "pore_max_count": 2,
+    "isolate_pore": false,
+    "smart_pore_isolation": true,
+    "isolated_pore_index": 0,
+    "pore_shell_thickness": 8.0
+  },
+  "export": {
+    "width": 2400,
+    "height": 1800,
+    "dpi": 300
+  },
+  "geometry": {
+    "displayed_atoms": 27,
+    "primary_atoms": 27,
+    "periodic_helper_atoms": 0,
+    "displayed_contacts": 54,
+    "displayed_hydrogen_bonds": 0,
+    "displayed_polyhedron_faces": 8,
+    "displayed_pore_envelopes": 0,
+    "pore_envelope_radii_angstrom": []
+  },
+  "warnings": [
+    "Structure status: Plausibility passed",
+    "Inferred solid contacts use covalent-radius limits (×1.24); they are display assignments, not refined bond orders. Metal–metal contacts are suppressed."
+  ],
+  "conventions": "Orthographic projection; Cartesian distances in Å. Expanded CIF sites with periodic boundary copies. Illustrative atom sizes, contact/polyhedron display heuristics, and optional grid-derived maximal-empty-sphere pore envelopes.",
+  "software": "DIFFRUX 23.6.0",
+  "source_status": "Idealized NaCl rock-salt fixture; reference geometry, not a refinement result."
+}

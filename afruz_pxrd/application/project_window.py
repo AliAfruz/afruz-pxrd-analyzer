@@ -740,7 +740,7 @@ class ProjectWindowMixin:
         path = self.current_project
         if save_as or path is None:
             filename, _ = QFileDialog.getSaveFileName(
-                self, "Save Afruz project", "", "Afruz PXRD Project (*.afz)"
+                self, f"Save {APP_NAME} project", "", f"{APP_NAME} Project (*.afz)"
             )
             if not filename:
                 return
@@ -763,7 +763,7 @@ class ProjectWindowMixin:
 
     def open_project(self, checked=False):
         filename, _ = QFileDialog.getOpenFileName(
-            self, "Open Afruz project", "", "Afruz PXRD Project (*.afz)"
+            self, f"Open {APP_NAME} project", "", f"{APP_NAME} Project (*.afz)"
         )
         if not filename:
             return

@@ -1,20 +1,35 @@
-# Afruz PXRD Analyzer 23.5.1
+# DIFFRUX
 
-Local patch 23.5.1 corrects Le Bail starting-area scaling and observed-intensity
-repartition on both CPU and CUDA, and reports incomplete extraction convergence.
-Existing saved results are preserved; rerun Le Bail to apply the corrected solver.
+### A scientific workbench for powder X-ray diffraction and crystal visualization
+
+![DIFFRUX 23.6.0 — exact CIF-derived NaCl rendering](docs/figures/diffrux-hero.png)
 
 [![Windows tests](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml/badge.svg)](https://github.com/AliAfruz/afruz-pxrd-analyzer/actions/workflows/tests.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23119992.svg)](https://doi.org/10.5281/zenodo.23119992)
 
-Afruz PXRD Analyzer is a Windows-focused PySide6 workbench for powder X-ray diffraction import, preprocessing, peak analysis, crystallographic matching, whole-pattern refinement, quantitative phase analysis, validation, and reproducible reporting.
+**DIFFRUX 23.6.0**, formerly **Afruz PXRD Analyzer**, is a Windows-focused PySide6
+workbench for PXRD import, preprocessing, peak analysis, crystallographic matching,
+whole-pattern refinement, validation, reproducible reporting and CPU/GPU crystal figures.
+
+[Start on Windows](#install-and-start-on-windows) · [Crystal gallery](#3d-crystal-figures) ·
+[Refinement Studio](STEPWISE_CIF_QUEUE.md) · [Blender export](BLENDER_EXPORT.md)
+
+| Analyze | Refine and compare | Visualize and export |
+| --- | --- | --- |
+| Background engines, peak-protected smoothing and peak fitting | Pawley, Le Bail and structure-constrained Rietveld workflows | CPU/GPU Crystal Studio, coordination polyhedra and single-pore views |
+| CIF simulation and instrument-aware profiles | Step-wise one-CIF candidate queues, run history and labelled exclusions | PNG/TIFF figures, editable Blender GLB, clean TXT tables and saved AFZ projects |
+
+The Le Bail solver includes the 23.5.1 correction to starting-area scaling and
+observed-area repartition on CPU/CUDA. Existing saved fits are preserved; rerun
+Le Bail to apply the corrected algorithm.
 
 The application contains both established workflows and explicitly labelled experimental/prototype engines. Synthetic examples verify deterministic software behavior; they are not certified reference materials and do not make a result publication-ready automatically.
 
 ## Release and citation
 
-This source package is prepared for a GitHub release and Zenodo archival. Cite
-the exact archived software version used in an analysis. Citation metadata are
+The current GitHub source identifies itself as DIFFRUX 23.6.0. It includes the
+latest local workflows; it is **not** the same snapshot as the older Zenodo deposit.
+Cite the exact archived version or commit used in an analysis. Citation metadata are
 provided in [`CITATION.cff`](CITATION.cff), while the scientific references for
 Pawley, Le Bail, Rietveld, profile, scattering-factor, and preferred-orientation
 methods are mapped in [`SCIENTIFIC_REFERENCES.md`](SCIENTIFIC_REFERENCES.md).
@@ -28,14 +43,22 @@ Release 23.0.0 is archived under the version DOI
 concept DOI is [10.5281/zenodo.23119992](https://doi.org/10.5281/zenodo.23119992).
 Follow [`PUBLISHING_GUIDE.md`](PUBLISHING_GUIDE.md) for future releases.
 
+The repository URL, Python import/distribution names (`afruz_pxrd` /
+`afruz-pxrd-analyzer`), legacy `afruz-pxrd` launcher, `.afz` files, settings keys
+and scene schemas are retained for compatibility. Installed packages also provide
+the `diffrux` launcher. Existing projects do not need conversion.
+
+<details>
+<summary>Recent workflow additions (23.2–23.5)</summary>
+
 Local development release 23.2.0 added a central, lineage-aware sequential
 refinement laboratory alongside the CIF-to-PXRD simulation canvas and the three
 isolated phase-exclusion investigation windows. The laboratory supports a
 multi-CIF library with one auditable active model per run, unlimited uniquely
 identified Pawley/Le Bail/Rietveld runs, labelled next-run fit-domain masks,
 GPU-aware execution, frozen history plots, complete ZIP export, and AFZ project
-resume. The public GitHub/Zenodo release remains unchanged until a later
-reviewed release is explicitly published. See
+resume. These additions are included in the current GitHub source; the historical
+23.0.0 Zenodo archive remains unchanged. See
 [`PHASE_EXCLUSION_INVESTIGATION.md`](PHASE_EXCLUSION_INVESTIGATION.md).
 Local release 23.3.0 adds the **Step-wise queue** tab to that laboratory. Check
 and label several CIF candidates, run one CIF at a time automatically, then
@@ -71,7 +94,9 @@ and the main Crystal Studio. Export GLB atoms, contact cylinders, polyhedral
 surfaces, orange pore envelopes and cell guides with source provenance and
 explicit Ångström/display-unit conventions. See [Blender export](BLENDER_EXPORT.md).
 
-The complete release verification is recorded in
+</details>
+
+Current and historical verification are recorded in
 [`RELEASE_AUDIT.md`](RELEASE_AUDIT.md), and fixture licensing/provenance is
 tracked in [`DATA_PROVENANCE.md`](DATA_PROVENANCE.md).
 
@@ -111,6 +136,23 @@ sidebar and **Ctrl+Shift+R** toggles the contextual analysis sidebar when more p
 space is needed.
 
 ## 3D crystal figures
+
+| NaCl unit cell and coordination | NaCl polyhedra — selected visualization |
+| --- | --- |
+| ![NaCl unit cell, generated by DIFFRUX](docs/figures/nacl-crystal.png) | ![NaCl visualization with purple coordination polyhedra, selected by Ali Afruz](docs/figures/nacl-polyhedra.png) |
+
+These are outputs of Crystal Studio using project-generated NaCl data. The
+right-hand image is Ali Afruz's selected visualization, preserved unchanged from
+a saved synthetic Rietveld run in version 23.5.0: the fitted cell is shown with
+fixed CIF fractional coordinates and occupancies. It is a different run from the
+Le Bail plot below. Atom sizes, colors and inferred contacts are display
+conventions. No AI-generated scientific geometry is used.
+
+![NaCl Le Bail demonstration, including observed, calculated, background and residual profiles](docs/figures/nacl-le-bail.png)
+
+The PXRD example is synthetic software-test data, not an experimental validation
+standard. [Figure sources, settings and reproducibility](docs/figures/README.md)
+include editable SVG plot data and Crystal Studio scene files.
 
 Open **3D Crystal Studio…** in the Rietveld workspace to render saved structures
 with cinematic lighting, coordination polyhedra and high-resolution PNG/TIFF
@@ -198,7 +240,7 @@ The supplied NaCl/CsCl datasets are small deterministic regression examples. For
 
 ## Project safety and recovery
 
-Afruz projects use the `.afz` extension. Each file is a ZIP archive containing:
+DIFFRUX and legacy Afruz projects use the `.afz` extension. Each file is a ZIP archive containing:
 
 - `project.json`: project schema, interface state, analysis state, and provenance
 - `datasets.npz`: compressed numerical arrays

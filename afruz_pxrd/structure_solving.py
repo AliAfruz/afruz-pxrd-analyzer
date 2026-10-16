@@ -89,7 +89,7 @@ def create_structure_solution_package(
         backup=False,
     )
     manifest = {
-        "package_type": "Afruz provisional structure-solution handoff",
+        "package_type": "DIFFRUX provisional structure-solution handoff",
         "candidate_cell": dict(candidate_cell),
         "proposed_space_group": proposed_space_group,
         "formula_hint": formula_hint,
@@ -112,7 +112,7 @@ def create_structure_solution_package(
     )
     readme_path = directory / "README_STRUCTURE_SOLUTION.txt"
     readme_path.write_text(
-        "Afruz structure-solution handoff package\n"
+        "DIFFRUX structure-solution handoff package\n"
         "=======================================\n\n"
         "Use the HKL CSV, candidate cell, proposed space group and formula hint as inputs for direct-space or external structure-solution tools.\n"
         "A successful structure proposal must return a CIF with atomic coordinates before Phase 11 Rietveld refinement.\n",
@@ -394,7 +394,7 @@ def build_provisional_cif_text(
         f"_chemical_formula_sum '{formula}'",
         f"_chemical_formula_weight {formula_weight:.6f}",
         "_cell_formula_units_Z 1",
-        "_audit_creation_method 'Afruz direct-space provisional P1 model; site-derived cell composition when no formula was supplied'",
+        "_audit_creation_method 'DIFFRUX direct-space provisional P1 model; site-derived cell composition when no formula was supplied'",
         f"_space_group_name_H-M_alt '{proposed_space_group or 'P 1'}'",
         f"_cell_length_a {float(cell['a']):.8f}",
         f"_cell_length_b {float(cell['b']):.8f}",
@@ -603,20 +603,20 @@ def create_direct_space_solution_package(
     solution_txt = write_mapping_txt(
         directory / "afruz_direct_space_solution.txt",
         record,
-        title="Afruz direct-space provisional solution",
+        title="DIFFRUX direct-space provisional solution",
         metadata={"source_dataset_uid": source_dataset_uid},
         backup=False,
     )
     readme_path = directory / "README_DIRECT_SPACE_PROTOTYPE.txt"
     readme_path.write_text(
-        "Afruz direct-space structure-solution prototype\n"
+        "DIFFRUX direct-space structure-solution prototype\n"
         "==============================================\n\n"
         "This package contains a provisional P1 atom-placement candidate created from an indexed cell, a formula hint and extracted hkl intensities.\n"
         "It is not a final structure. Validate the CIF chemically and by whole-pattern refinement before using it as evidence.\n",
         encoding="utf-8",
     )
     manifest = {
-        "package_type": "Afruz direct-space provisional structure package",
+        "package_type": "DIFFRUX direct-space provisional structure package",
         "source_dataset_uid": source_dataset_uid,
         "master_peak_checksum": master_peak_checksum,
         "formula_hint": formula_hint,
@@ -1155,19 +1155,19 @@ def create_fragment_direct_space_solution_package(
     solution_txt = write_mapping_txt(
         directory / "afruz_fragment_direct_space_solution.txt",
         record,
-        title="Afruz fragment direct-space provisional solution",
+        title="DIFFRUX fragment direct-space provisional solution",
         metadata={"source_dataset_uid": source_dataset_uid},
         backup=False,
     )
     readme_path.write_text(
-        "Afruz fragment direct-space structure-solution prototype\n"
+        "DIFFRUX fragment direct-space structure-solution prototype\n"
         "======================================================\n\n"
         "This package contains a provisional CIF created by placing one or more molecular/atomic fragments inside an indexed cell.\n"
         "The fragment geometry is preserved except for declared torsions. The result is not a final structure and must be validated chemically and by whole-pattern refinement.\n",
         encoding="utf-8",
     )
     manifest = {
-        "package_type": "Afruz fragment direct-space provisional structure package",
+        "package_type": "DIFFRUX fragment direct-space provisional structure package",
         "source_dataset_uid": source_dataset_uid,
         "master_peak_checksum": master_peak_checksum,
         "formula_hint": formula_hint,

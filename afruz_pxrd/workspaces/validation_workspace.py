@@ -13,7 +13,7 @@ class ValidationWorkspaceMixin:
     def _report_project_name(self) -> str:
         if self.current_project is not None:
             return self.current_project.stem
-        return "Untitled Afruz project"
+        return f"Untitled {APP_NAME} project"
 
     def _accepted_results_for_report(self) -> dict:
         accepted: dict[str, dict] = {}
@@ -87,7 +87,7 @@ class ValidationWorkspaceMixin:
                         "description": "Use Export PNG/SVG for the current view; this report records figure metadata and data tables.",
                     }
                 ],
-                notes="Generated from Afruz Complete Report Package exporter.",
+                notes=f"Generated from {APP_NAME} Complete Report Package exporter.",
             )
             package = result["package"]
             archive = result["archive"]
@@ -271,7 +271,7 @@ class ValidationWorkspaceMixin:
                 "analyses": analyses,
             })
         return {
-            "project_name": self.current_project.stem if self.current_project else "Afruz_PXRD_Project",
+            "project_name": self.current_project.stem if self.current_project else f"{APP_NAME}_Project",
             "project_path": str(self.current_project) if self.current_project else "Not saved",
             "application_version": APP_VERSION,
             "datasets": exported,

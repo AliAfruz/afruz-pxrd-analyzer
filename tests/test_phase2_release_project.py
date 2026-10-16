@@ -65,8 +65,8 @@ def _write_archive(path: Path, manifest, arrays=None, *, manifest_bytes=None):
 
 
 def test_authoritative_release_identity_is_consistent():
-    assert APP_NAME == "Afruz PXRD Analyzer"
-    assert APP_VERSION == "23.5.1"
+    assert APP_NAME == "DIFFRUX"
+    assert APP_VERSION == "23.6.0"
     assert afruz_pxrd.__version__ == APP_VERSION
     assert APP_RELEASE == f"{APP_NAME} {APP_VERSION}"
     assert APP_WINDOW_TITLE == f"{APP_NAME} — {APP_VERSION}"

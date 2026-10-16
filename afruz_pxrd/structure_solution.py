@@ -12,6 +12,7 @@ from typing import Iterable
 import numpy as np
 
 from .text_export import write_table_txt, write_mapping_txt, write_manifest_txt
+from .version import APP_NAME
 from scipy.optimize import least_squares
 
 from .crystallography import (
@@ -900,7 +901,7 @@ def build_p1_provisional_cif(
     candidate_or_cell: dict,
     atoms: list[dict],
     *,
-    title: str = "Afruz provisional structure",
+    title: str = "DIFFRUX provisional structure",
     formula: str = "",
     proposed_space_group: str = "Unresolved",
     provenance: str = "",
@@ -963,7 +964,7 @@ def build_p1_provisional_cif(
         f"_chemical_formula_sum '{formula_value}'",
         f"_chemical_formula_weight {formula_weight:.6f}",
         "_cell_formula_units_Z 1",
-        "_audit_creation_method 'Afruz PXRD Analyzer Phase Revolution provisional P1 container'",
+        f"_audit_creation_method '{APP_NAME} Phase Revolution provisional P1 container'",
         f"_afruz_proposed_space_group '{proposed_space_group}'",
         "_afruz_structure_status 'Provisional CIF - not independently validated'",
         f"_afruz_structure_provenance '{provenance or 'Not supplied'}'",
@@ -1380,7 +1381,7 @@ def create_structure_solution_package(
     readme.write_text(
         "\n".join(
             [
-                "AFRUZ PHASE REVOLUTION — STRUCTURE-SOLUTION HANDOFF",
+                "DIFFRUX PHASE REVOLUTION — STRUCTURE-SOLUTION HANDOFF",
                 "",
                 f"Interface: {interface}",
                 "",

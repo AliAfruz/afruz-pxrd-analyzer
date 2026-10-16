@@ -462,6 +462,6 @@ def export_article_plot_package(
         "files": [str(path) for path in written],
         "manifest": str(manifest),
         "scientific_boundary": (
-            "The central plot canvas and exported figures are white by design; surrounding GUI controls may follow the dark Afruz theme."
+            "The central plot canvas and exported figures are white by design; surrounding GUI controls may follow the dark DIFFRUX theme."
         ),
     }

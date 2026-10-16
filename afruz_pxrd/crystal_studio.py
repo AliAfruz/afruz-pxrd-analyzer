@@ -25,6 +25,7 @@ from .crystal_scene import (
 from .crystal_render import export_crystal, render_crystal
 from .crystal_intelligence import analyze_crystal_model, format_smart_crystal_report
 from .widgets import NoWheelComboBox, NoWheelDoubleSpinBox, NoWheelSpinBox
+from .version import APP_NAME
 
 
 class _JobSignals(QObject):
@@ -163,7 +164,7 @@ class CrystalChemistryReportDialog(QDialog):
     def __init__(self, report, parent=None):
         super().__init__(parent)
         self.report = report
-        self.setWindowTitle("Crystal Chemistry QA — Afruz PXRD")
+        self.setWindowTitle(f"Crystal Chemistry QA — {APP_NAME}")
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.resize(920, 720)
         layout = QVBoxLayout(self)
@@ -260,7 +261,7 @@ class CrystalStudioDialog(QDialog):
         if result is not None and models is not None:
             raise ValueError("Provide a refinement result or frozen crystal models, not both.")
         super().__init__(parent)
-        self.setWindowTitle("Crystal Studio — Afruz PXRD")
+        self.setWindowTitle(f"Crystal Studio — {APP_NAME}")
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.resize(1260, 860)
         self.setMinimumSize(780, 560)

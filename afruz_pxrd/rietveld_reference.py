@@ -24,7 +24,7 @@ RIETVELD_REFERENCE_IMAGE_DATA: dict[str, Any] = {
     ),
     "scientific_note": (
         "The phase identity and volume above belong to the reference image, "
-        "not to the user's current dataset. Afruz must export measured/refined "
+        "not to the user's current dataset. DIFFRUX must export measured/refined "
         "values from the active result separately."
     ),
 }

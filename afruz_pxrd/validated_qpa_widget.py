@@ -56,7 +56,7 @@ class ValidatedQPAWidget(QWidget):
         description = QLabel(
             "Audit CIF chemistry and unit-cell mass, then calculate transparent "
             "Hill–Howard crystalline fractions from the current structure-constrained "
-            "refinement. The calculation runs entirely inside Afruz."
+            "refinement. The calculation runs entirely inside DIFFRUX."
         )
         description.setWordWrap(True)
         description.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
@@ -158,7 +158,7 @@ class ValidatedQPAWidget(QWidget):
         self.known_standard_percent.setEnabled(False)
         native_note = QLabel(
             "No external refinement engine is called. Scale factors and covariance are read "
-            "from the current Afruz structure-constrained refinement."
+            "from the current DIFFRUX structure-constrained refinement."
         )
         native_note.setWordWrap(True)
         native_note.setObjectName("mutedLabel")
@@ -233,7 +233,7 @@ class ValidatedQPAWidget(QWidget):
                 structures,
                 scale_covariance=result.get("scale_covariance"),
                 scale_standard_errors=[row.get("scale_standard_error") for row in result.get("phases", [])],
-                engine="Afruz native Hill–Howard",
+                engine="DIFFRUX native Hill–Howard",
                 internal_standard_phase=(None if self.internal_standard.currentText() == "None" else self.internal_standard.currentText()),
                 internal_standard_known_wt_percent=(None if self.internal_standard.currentText() == "None" else self.known_standard_percent.value()),
             )
@@ -256,7 +256,7 @@ class ValidatedQPAWidget(QWidget):
             self.summary.setText("No QPA result.")
             return
         rows = result.get("phases", [])
-        engine = result.get("engine", "Afruz native Hill–Howard")
+        engine = result.get("engine", "DIFFRUX native Hill–Howard")
         classification = result.get("classification", "Native crystallographic QPA")
         self.fraction_table.setRowCount(len(rows))
         for row_index, row in enumerate(rows):

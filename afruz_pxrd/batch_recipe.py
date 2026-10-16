@@ -27,7 +27,7 @@ DEFAULT_BATCH_STAGES = {
 
 DEFAULT_RECIPE = {
     "recipe_version": RECIPE_VERSION,
-    "name": "Afruz shared batch recipe",
+    "name": "DIFFRUX shared batch recipe",
     "created_utc": "",
     "software_version": APP_VERSION,
     "stages": DEFAULT_BATCH_STAGES,

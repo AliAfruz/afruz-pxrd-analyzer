@@ -12,7 +12,7 @@ import zipfile
 import numpy as np
 
 from .models import Dataset
-from .version import APP_VERSION
+from .version import APP_NAME, APP_VERSION
 
 
 PROJECT_VERSION = 2
@@ -153,7 +153,7 @@ def _read_project_archive(path: str | Path) -> tuple[dict, dict[str, np.ndarray]
     if not zipfile.is_zipfile(project_path):
         raise ProjectFormatError(
             f"'{project_path.name}' is not a valid .afz ZIP archive. "
-            "Choose an Afruz project file or restore its .afz.bak backup."
+            f"Choose a {APP_NAME} project file or restore its .afz.bak backup."
         )
 
     try:

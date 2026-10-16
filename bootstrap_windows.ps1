@@ -63,7 +63,7 @@ if (-not (Test-Path -LiteralPath $venvPython)) {
 
 $selectedLockFile = if ($Development) { $developmentLockFile } else { $lockFile }
 $environmentLabel = if ($Development) { "development/test" } else { "runtime" }
-Write-Host "Installing the locked Afruz PXRD $environmentLabel environment..."
+Write-Host "Installing the locked DIFFRUX $environmentLabel environment..."
 & $venvPython -m pip install --disable-pip-version-check -r $selectedLockFile
 if ($LASTEXITCODE -ne 0) {
     throw "Dependency installation failed with exit code $LASTEXITCODE."

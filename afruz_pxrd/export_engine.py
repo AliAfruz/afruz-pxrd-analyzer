@@ -36,7 +36,7 @@ from openpyxl.utils import get_column_letter
 from .contracts.base import decode_value
 from .text_export import atomic_write_text, safe_filename, sha256_file, write_manifest_txt, write_table_txt
 from .manuscript_plot_export import MANUSCRIPT_COLUMN_SPECS, build_manuscript_plot_data
-from .version import APP_VERSION
+from .version import APP_NAME, APP_VERSION
 
 EXPORT_SCHEMA_VERSION = 2
 MISSING_TEXT = "NA"
@@ -984,7 +984,7 @@ def build_clean_export_package(
                     if candidate is not None:
                         tables.append(candidate)
 
-    project_name = str(snapshot.get("project_name") or "Afruz PXRD Project")
+    project_name = str(snapshot.get("project_name") or f"{APP_NAME} Project")
     package = ExportPackage(
         project_name=project_name,
         created_utc=utc_timestamp(),
@@ -1166,7 +1166,7 @@ def build_export_package(
     include_categories: set[str] | None = None,
 ) -> ExportPackage:
     include = set(include_categories or CATEGORY_LABELS)
-    project_name = str(snapshot.get("project_name") or "Afruz PXRD Project")
+    project_name = str(snapshot.get("project_name") or f"{APP_NAME} Project")
     datasets = [d for d in snapshot.get("datasets", []) if isinstance(d, Mapping)]
     tables: list[ExportTable] = []
 
@@ -1466,7 +1466,7 @@ def write_excel_workbook(
 
     overview = wb.create_sheet(_unique_sheet_name("Overview", used))
     overview.sheet_view.showGridLines = False
-    overview["A1"] = "Afruz PXRD Analyzer — Raptor Export Package"
+    overview["A1"] = f"{APP_NAME} — Raptor Export Package"
     overview["A1"].fill = title_fill
     overview["A1"].font = title_font
     overview.merge_cells("A1:F1")
@@ -1608,7 +1608,7 @@ def write_excel_workbook(
 
 def _readme_text(package: ExportPackage) -> str:
     lines = [
-        "AFRUZ PXRD ANALYZER — RAPTOR EXPORT PACKAGE",
+        f"{APP_NAME} — RAPTOR EXPORT PACKAGE",
         "=" * 48,
         "",
         f"Project: {package.project_name}",
@@ -1634,7 +1634,7 @@ def _readme_text(package: ExportPackage) -> str:
 
 def _clean_readme_text(package: ExportPackage) -> str:
     lines = [
-        "AFRUZ PXRD ANALYZER — CLEAN SCIENTIFIC DATA",
+        f"{APP_NAME} — CLEAN SCIENTIFIC DATA",
         "=" * 48,
         "",
         f"Project: {package.project_name}",
@@ -1798,7 +1798,7 @@ def export_package_bundle(
     package.validate()
     out = Path(output_directory)
     out.mkdir(parents=True, exist_ok=True)
-    stem = safe_filename(base_name or package.project_name or "Afruz_PXRD_Export")
+    stem = safe_filename(base_name or package.project_name or f"{APP_NAME}_Export")
     result: dict[str, Any] = {"project_name": package.project_name, "table_count": len(package.tables)}
     stages = int(bool(excel)) + int(bool(text)) + int(bool(text and zip_text))
     completed = 0

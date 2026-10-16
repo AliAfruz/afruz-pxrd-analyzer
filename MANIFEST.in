@@ -24,4 +24,5 @@ recursive-include tests *.py *.cif *.txt
 recursive-include Afruz_PXRD_Synthetic_Test_Set *.txt *.cif
 recursive-include Afruz_PXRD_Statistical_Validation_Set *.txt *.cif
 recursive-include tools *.py
+recursive-include docs *.md *.png *.svg *.json *.txt
 global-exclude __pycache__ *.py[cod] *.zip .coverage

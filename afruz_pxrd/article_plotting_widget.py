@@ -56,7 +56,7 @@ class ArticlePlottingWidget(QWidget):
         layout.addWidget(heading)
         desc = QLabel(
             "Create journal-style PXRD figures with full control of colors, fonts, line widths, labels, legend and Bragg tick markers. "
-            "The central plot canvas and all exported plots use a white article template; GUI controls may follow the dark Afruz theme. "
+            "The central plot canvas and all exported plots use a white article template; GUI controls may follow the dark DIFFRUX theme. "
             "Exports are forced to 1200 DPI."
         )
         desc.setWordWrap(True)

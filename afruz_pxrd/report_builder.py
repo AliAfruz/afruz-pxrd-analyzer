@@ -183,7 +183,7 @@ def export_dataset_points(
         metadata={
             "dataset_uid": uid,
             "dataset_name": name,
-            "source": "Afruz complete report package",
+            "source": f"{APP_NAME} complete report package",
         },
         backup=False,
     )
@@ -341,7 +341,7 @@ def build_complete_report_package(
     include_data_points: bool = True,
     include_html: bool = True,
 ) -> dict[str, Any]:
-    """Create a complete, reproducible Afruz report package.
+    """Create a complete, reproducible DIFFRUX report package.
 
     The package contains readable reports plus all numerical data as clean tab-delimited TXT (and legacy CSV copies for compatibility). It is
     designed for thesis/paper review, lab records and reproducible sharing.
@@ -372,7 +372,7 @@ def build_complete_report_package(
             table_exports.append(export_table_csv(table_dir, name, row_list))
 
     payload = {
-        "report_type": "Afruz complete scientific report package",
+        "report_type": f"{APP_NAME} complete scientific report package",
         "schema_version": REPORT_SCHEMA_VERSION,
         "application_name": APP_NAME,
         "application_version": APP_VERSION,
@@ -407,7 +407,7 @@ def build_complete_report_package(
     write_mapping_txt(
         report_txt_path,
         payload,
-        title=f"Afruz complete scientific report — {project_name}",
+        title=f"{APP_NAME} complete scientific report — {project_name}",
         metadata={
             "application_name": APP_NAME,
             "application_version": APP_VERSION,
@@ -428,7 +428,7 @@ def build_complete_report_package(
     files.extend(Path(row["txt_path"]) for row in table_exports)
 
     manifest = {
-        "package_type": "Afruz complete scientific report package",
+        "package_type": f"{APP_NAME} complete scientific report package",
         "schema_version": REPORT_SCHEMA_VERSION,
         "application_name": APP_NAME,
         "application_version": APP_VERSION,
@@ -449,7 +449,7 @@ def build_complete_report_package(
         manifest_txt_path,
         files + [manifest_path],
         root=root,
-        title=f"Afruz complete report manifest — {project_name}",
+        title=f"{APP_NAME} complete report manifest — {project_name}",
         backup=False,
     )
     payload["manifest_path"] = str(manifest_path)
@@ -517,7 +517,7 @@ def build_reproducibility_report(
     warnings = list(warnings)
     figures = list(figures)
     payload = {
-        "report_type": "Afruz reproducibility report",
+        "report_type": f"{APP_NAME} reproducibility report",
         "application_name": APP_NAME,
         "application_version": APP_VERSION,
         "project_name": project_name,
@@ -543,7 +543,7 @@ def build_reproducibility_report(
 
 def _render_complete_markdown(payload: dict) -> str:
     lines = [
-        f"# Afruz complete scientific report — {payload['project_name']}",
+        f"# {APP_NAME} complete scientific report — {payload['project_name']}",
         "",
         f"- **Application**: {payload.get('application_name', APP_NAME)} {payload.get('application_version', APP_VERSION)}",
         f"- **Created**: {payload.get('created_at', '')}",
@@ -679,12 +679,12 @@ th, td { border: 1px solid #d1d5db; padding: 6px 8px; text-align: left; font-siz
 th { background: #f3f4f6; }
 code { background: #f3f4f6; padding: 1px 4px; border-radius: 4px; }
 """
-    return "<!doctype html><html><head><meta charset='utf-8'><title>Afruz report</title><style>" + style + "</style></head><body>" + "\n".join(body_lines) + "</body></html>"
+    return f"<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(APP_NAME)} report</title><style>" + style + "</style></head><body>" + "\n".join(body_lines) + "</body></html>"
 
 
 def _render_markdown(payload: dict) -> str:
     lines = [
-        f"# Afruz reproducibility report — {payload['project_name']}",
+        f"# {APP_NAME} reproducibility report — {payload['project_name']}",
         "",
         f"- **Application**: {payload.get('application_name', APP_NAME)} {payload.get('application_version', APP_VERSION)}",
         "",

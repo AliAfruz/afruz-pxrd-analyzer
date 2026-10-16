@@ -20,7 +20,7 @@ from .crystal_scene import (
     MOF_PORE_STYLE, MOF_STYLE, PORE_ORANGE_RGB, SCIENTIFIC_STYLE,
     display_radius, element_color, scene_document,
 )
-from .version import APP_RELEASE
+from .version import APP_NAME, APP_RELEASE
 
 
 @dataclass(frozen=True)
@@ -290,7 +290,7 @@ def build_editable_glb(scene, options=None, *, camera=None, progress=None):
     # scene_document already sanitizes diagnostics; a live camera must be finite too.
     json.dumps(document, ensure_ascii=False, allow_nan=False)
     group_nodes = [glb.node(role, children=children, extras={"afruz_role": "group"}) for role, children in groups.items()]
-    root = glb.node(scene.model.get("data_name", "Afruz crystal"), children=group_nodes,
+    root = glb.node(scene.model.get("data_name", f"{APP_NAME} crystal"), children=group_nodes,
         rotation=[-math.sqrt(.5), 0., 0., math.sqrt(.5)], extras={
             "afruz_role": "crystal_root", "angstrom_per_scene_unit": 1.,
             "source_cell_json": json.dumps(document["model"].get("cell", {}), allow_nan=False),
